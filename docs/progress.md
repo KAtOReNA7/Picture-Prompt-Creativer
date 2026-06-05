@@ -55,8 +55,12 @@
 - 添加远程仓库 `origin`：`https://github.com/KAtOReNA7/Picture-Prompt-Creativer.git`。
 - 执行 `git ls-remote origin HEAD`，命令成功但无输出。
 - 执行 `git ls-remote --heads origin`，确认远程仓库没有已有分支。
+- 本地 Git 提交身份未配置全局值，已仅在当前仓库设置 `user.name=KAtOReNA7` 和 `user.email=KAtOReNA7@users.noreply.github.com`。
+- 执行 `git add .`。
+- 执行初始化提交：`init: create project skeleton and environment diagnostics`。
+- 执行 `git push -u origin main`，成功推送 `main` 并建立 upstream。
 
-计划继续：
+结果：
 
-- 提交当前项目骨架和环境诊断脚本。
-- 推送 `main` 分支到 GitHub。
+- 本地仓库已绑定 GitHub 远程仓库。
+- 远程仓库原本为空，未发生强推或覆盖远程内容。
