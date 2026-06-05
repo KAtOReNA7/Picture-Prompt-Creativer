@@ -158,3 +158,35 @@
 说明：
 
 - 本阶段只封装客户端和配置检测，不实现图片分析；图片分析留到阶段 4。
+
+## 2026-06-06 阶段 4：图片逆向分析
+
+已完成：
+
+- 新增图片分析 Prompt 模板 `src/lib/ai/prompts/image-analysis-prompt.ts`。
+- 新增图片分析结构化输出类型和运行时校验 `src/lib/ai/schemas/image-analysis.ts`。
+- 新增 JSON 容错解析工具 `src/lib/ai/json.ts`，支持直接 JSON、JSON 代码块和文本中的第一个完整 JSON 对象。
+- 新增图片分析服务 `src/lib/analysis/image-analysis-service.ts`。
+- 新增图片分析接口 `POST /api/images/analyze`。
+- `/analyze` 页面接入真实 AI 分析：上传成功后可点击“开始 AI 分析”，分析成功后展示真实结构化结果。
+- 分析结果保存到 `PromptAnalysis` 表，`rawJson` 保存模型返回的完整 JSON。
+- 页面展示模板标题、整体描述、主体、风格、年代感、构图、色彩、光影、材质、情绪、传播潜力、评分、标签、可替换字段、英文 reverse prompt 和英文 negative prompt。
+- reverse prompt 和 negative prompt 支持一键复制。
+- 新增分析文档 `docs/image-analysis.md`。
+
+验证结果：
+
+- `npm run check:env`：脚本执行成功；通过 13 项，失败 2 项，跳过 0 项。失败项为本机代理端口 `7890`、`10809` 未监听。
+- `npm run lint`：通过。
+- `npm run typecheck`：通过。
+- `npm run build`：通过。
+- `POST /api/images/upload`：通过。
+- `POST /api/images/analyze`：通过。
+- 数据库验证：`PromptAnalysis` 记录数从 0 增加到 1。
+- reverse prompt：英文。
+- negative prompt：英文。
+- 浏览器检查：`/analyze` 可访问，包含上传区域、“开始 AI 分析”按钮和“不保证逐像素复刻原图”提示。
+
+实现说明：
+
+- 当前 OpenAI 兼容中转在非流式调用下会返回 SSE 字符串，因此图片分析服务使用 OpenAI SDK 的流式模式收集内容，再进行 JSON 容错解析和字段校验。

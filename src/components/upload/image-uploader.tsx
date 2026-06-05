@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 
-type UploadedImage = {
+export type UploadedImage = {
   id: string;
   filename: string;
   originalName: string;
@@ -13,6 +13,10 @@ type UploadedImage = {
   localPath: string;
   publicPath: string | null;
   createdAt?: string;
+};
+
+type ImageUploaderProps = {
+  onUploaded?: (image: UploadedImage) => void;
 };
 
 type UploadResponse =
@@ -26,21 +30,13 @@ type UploadResponse =
     };
 
 function formatBytes(size: number): string {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(2)} MB`;
 }
 
 function formatDate(value: string | undefined): string {
-  if (!value) {
-    return "刚刚";
-  }
+  if (!value) return "刚刚";
 
   return new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
@@ -51,7 +47,7 @@ function formatDate(value: string | undefined): string {
   }).format(new Date(value));
 }
 
-export function ImageUploader() {
+export function ImageUploader({ onUploaded }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<UploadedImage | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -77,19 +73,20 @@ export function ImageUploader() {
       }
 
       setImage(data.image);
+      onUploaded?.(data.image);
     } catch {
       setError("上传失败，请检查网络或稍后重试。");
     } finally {
       setIsUploading(false);
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     }
   }
 
   function handleSelect(files: FileList | null) {
     const file = files?.[0];
-
-    if (file) {
-      void uploadFile(file);
-    }
+    if (file) void uploadFile(file);
   }
 
   return (
@@ -143,11 +140,7 @@ export function ImageUploader() {
         <div className="mt-5 rounded-md border border-slate-200 bg-white p-4">
           {image.publicPath ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image.publicPath}
-              alt={image.originalName}
-              className="max-h-80 w-full rounded-md object-contain"
-            />
+            <img src={image.publicPath} alt={image.originalName} className="max-h-80 w-full rounded-md object-contain" />
           ) : null}
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-md bg-slate-50 p-3">
