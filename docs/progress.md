@@ -64,3 +64,29 @@
 
 - 本地仓库已绑定 GitHub 远程仓库。
 - 远程仓库原本为空，未发生强推或覆盖远程内容。
+
+## 2026-06-06 阶段 1：创建中文 WebUI 骨架
+
+已完成：
+
+- 创建统一中文应用外壳和顶部导航栏，包含：首页、图片逆向分析、Prompt 库、风格迁移、系统设置、环境诊断。
+- 创建基础状态组件：`EmptyState`、`LoadingState`、`ErrorState`。
+- 创建 Prompt 展示组件：`PromptCard`。
+- 完成首页 `/`，展示工具名称、核心定位、功能卡片和核心流程。
+- 完成 `/analyze` 图片逆向分析 mock 页面，包含上传区域、分析结果、逆向英文 Prompt 和可替换字段。
+- 完成 `/library` Prompt 库 mock 页面，包含搜索框 UI 和 Prompt 卡片列表。
+- 完成 `/fusion` 风格迁移 mock 页面，包含原图风格摘要、新需求输入和融合后的英文 Prompt。
+- 完成 `/settings` 系统设置 mock 页面，展示模型配置且不显示 API Key 明文。
+- 完成 `/diagnostics` 环境诊断 mock 页面，展示正常、警告、未配置状态徽章。
+- 调整全局样式为浅色现代运营工具风格。
+
+验证结果：
+
+- `npm run lint`：通过。
+- `npm run build`：通过。
+- 本地浏览器检查：`/`、`/analyze`、`/library`、`/fusion`、`/settings`、`/diagnostics` 均可访问，页面标题和顶部导航均为中文。
+
+下一步建议：
+
+- 进入阶段 2：建立服务端环境变量模块、Prisma Client 初始化和 SQLite 数据库迁移。
+- 后续将 mock 数据替换为真实 API 和数据库数据。
