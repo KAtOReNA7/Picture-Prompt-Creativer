@@ -190,3 +190,31 @@
 实现说明：
 
 - 当前 OpenAI 兼容中转在非流式调用下会返回 SSE 字符串，因此图片分析服务使用 OpenAI SDK 的流式模式收集内容，再进行 JSON 容错解析和字段校验。
+
+## 2026-06-06 阶段 5：Prompt 拆解和可替换字段标注
+
+已完成：
+
+- 新增 Prompt 拆解提示词 `src/lib/ai/prompts/prompt-segmentation-prompt.ts`。
+- 新增 Prompt 拆解结构化校验 `src/lib/ai/schemas/prompt-segmentation.ts`。
+- 新增 `prompt-segmentation-service`，基于 `PromptAnalysis` 中已有 reversePrompt、negativePrompt 和风格字段拆解，不重新分析图片。
+- 新增 `POST /api/prompts/segment`。
+- `/analyze` 页面新增“拆解 Prompt”按钮，分析成功后可调用拆解接口。
+- `/analyze` 页面新增 Prompt 模块卡片，展示中文模块名、type、英文 content、是否可替换、中文替换建议和一键复制。
+- 可替换模块显示“可替换”，建议保留模块显示“建议保留”。
+- 拆解结果保存到 `PromptSegment` 表；再次拆解同一 analysis 时会先删除旧 segments，再保存新结果。
+- `/library` 页面轻量展示 mock 记录是否已有 Prompt 模块。
+- 新增文档 `docs/prompt-segmentation.md`。
+
+验证结果：
+
+- `npm run check:env`：脚本执行成功；通过 13 项，失败 2 项，跳过 0 项。失败项为本机代理端口 `7890`、`10809` 未监听。
+- `npm run lint`：通过。
+- `npm run build`：通过。
+- `POST /api/images/upload`：通过。
+- `POST /api/images/analyze`：通过。
+- `POST /api/prompts/segment`：通过。
+- 拆解结果：返回 11 个模块，type 为 `subject`、`scene`、`composition`、`style`、`color`、`lighting`、`camera`、`texture`、`mood`、`text_area`、`negative`。
+- 数据库验证：`PromptSegment` 写入 11 条记录。
+- 重复拆解验证：再次点击同一 analysis 的“拆解 Prompt”后，旧 segments 被删除并重建，数据库仍保持 11 条记录，没有重复堆积。
+- 浏览器检查：`/analyze` 可访问，包含“开始 AI 分析”和“拆解 Prompt”按钮。

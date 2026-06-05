@@ -64,10 +64,12 @@ function extractFirstJsonObject(text: string): string | null {
 
 function tryParse(raw: string): JsonParseResult {
   try {
+    const value = JSON.parse(raw);
+
     return {
       ok: true,
-      value: JSON.parse(raw),
-      rawJson: JSON.stringify(JSON.parse(raw)),
+      value,
+      rawJson: JSON.stringify(value),
     };
   } catch (error) {
     return {

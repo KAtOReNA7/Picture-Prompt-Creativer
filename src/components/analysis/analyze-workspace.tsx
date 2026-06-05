@@ -31,27 +31,55 @@ type ImageAnalysisResult = {
   commercialPotentialScore: number;
 };
 
+type SavedAnalysis = {
+  id: string;
+  imageId: string;
+  title: string | null;
+  styleSummary: string | null;
+  visualSubject: string | null;
+  composition: string | null;
+  colorPalette: string | null;
+  lighting: string | null;
+  texture: string | null;
+  eraFeeling: string | null;
+  topicPotential: string | null;
+  reversePrompt: string | null;
+  negativePrompt: string | null;
+  createdAt: string;
+};
+
+type PromptSegment = {
+  id: string;
+  type: string;
+  label: string;
+  content: string;
+  isReplaceable: boolean;
+  replaceHint: string | null;
+  sortOrder: number;
+};
+
+type SegmentationResult = {
+  analysisId: string;
+  segments: PromptSegment[];
+  templateSummary: string;
+  replacementStrategy: string;
+};
+
 type AnalyzeResponse =
   | {
       ok: true;
-      analysis: {
-        id: string;
-        imageId: string;
-        title: string | null;
-        styleSummary: string | null;
-        visualSubject: string | null;
-        composition: string | null;
-        colorPalette: string | null;
-        lighting: string | null;
-        texture: string | null;
-        eraFeeling: string | null;
-        topicPotential: string | null;
-        reversePrompt: string | null;
-        negativePrompt: string | null;
-        createdAt: string;
-      };
+      analysis: SavedAnalysis;
       result: ImageAnalysisResult;
     }
+  | {
+      ok: false;
+      error: string;
+    };
+
+type SegmentResponse =
+  | ({
+      ok: true;
+    } & SegmentationResult)
   | {
       ok: false;
       error: string;
@@ -166,11 +194,62 @@ function AnalysisResultView({ result }: { result: ImageAnalysisResult }) {
   );
 }
 
+function SegmentationView({ segmentation }: { segmentation: SegmentationResult }) {
+  return (
+    <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+      <div>
+        <p className="text-sm font-semibold text-cyan-700">Prompt 模块拆解</p>
+        <h2 className="mt-2 text-xl font-semibold text-slate-950">已生成 11 个结构化模块</h2>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <div className="rounded-md bg-cyan-50 p-4">
+          <h3 className="text-sm font-semibold text-cyan-950">模板保留重点</h3>
+          <p className="mt-2 text-sm leading-6 text-cyan-800">{segmentation.templateSummary}</p>
+        </div>
+        <div className="rounded-md bg-amber-50 p-4">
+          <h3 className="text-sm font-semibold text-amber-950">替换策略</h3>
+          <p className="mt-2 text-sm leading-6 text-amber-800">{segmentation.replacementStrategy}</p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4">
+        {segmentation.segments.map((segment) => (
+          <article key={segment.id} className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950">{segment.label}</h3>
+                <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">{segment.type}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-md px-3 py-1 text-sm font-medium ${
+                    segment.isReplaceable ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  {segment.isReplaceable ? "可替换" : "建议保留"}
+                </span>
+                <CopyButton text={segment.content} />
+              </div>
+            </div>
+            <p className="mt-4 rounded-md bg-white p-3 text-sm leading-7 text-slate-700">{segment.content}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">替换建议：{segment.replaceHint ?? "暂无替换建议"}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function AnalyzeWorkspace() {
   const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
+  const [analysis, setAnalysis] = useState<SavedAnalysis | null>(null);
   const [result, setResult] = useState<ImageAnalysisResult | null>(null);
+  const [segmentation, setSegmentation] = useState<SegmentationResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSegmenting, setIsSegmenting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [segmentError, setSegmentError] = useState<string | null>(null);
 
   async function startAnalysis() {
     if (!uploadedImage) {
@@ -180,7 +259,10 @@ export function AnalyzeWorkspace() {
 
     setIsAnalyzing(true);
     setError(null);
+    setSegmentError(null);
     setResult(null);
+    setAnalysis(null);
+    setSegmentation(null);
 
     try {
       const response = await fetch("/api/images/analyze", {
@@ -197,11 +279,49 @@ export function AnalyzeWorkspace() {
         return;
       }
 
+      setAnalysis(data.analysis);
       setResult(data.result);
     } catch {
       setError("图片分析失败，请检查网络或稍后重试。");
     } finally {
       setIsAnalyzing(false);
+    }
+  }
+
+  async function startSegmentation() {
+    if (!analysis) {
+      setSegmentError("请先完成图片 AI 分析。");
+      return;
+    }
+
+    setIsSegmenting(true);
+    setSegmentError(null);
+
+    try {
+      const response = await fetch("/api/prompts/segment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ analysisId: analysis.id }),
+      });
+      const data = (await response.json()) as SegmentResponse;
+
+      if (!response.ok || !data.ok) {
+        setSegmentError(data.ok ? "Prompt 拆解失败。" : data.error);
+        return;
+      }
+
+      setSegmentation({
+        analysisId: data.analysisId,
+        segments: data.segments,
+        templateSummary: data.templateSummary,
+        replacementStrategy: data.replacementStrategy,
+      });
+    } catch {
+      setSegmentError("Prompt 拆解失败，请检查网络或稍后重试。");
+    } finally {
+      setIsSegmenting(false);
     }
   }
 
@@ -211,8 +331,11 @@ export function AnalyzeWorkspace() {
         <ImageUploader
           onUploaded={(image) => {
             setUploadedImage(image);
+            setAnalysis(null);
             setResult(null);
+            setSegmentation(null);
             setError(null);
+            setSegmentError(null);
           }}
         />
         <button
@@ -222,6 +345,14 @@ export function AnalyzeWorkspace() {
           onClick={() => void startAnalysis()}
         >
           {isAnalyzing ? "正在分析" : "开始 AI 分析"}
+        </button>
+        <button
+          type="button"
+          disabled={!analysis || isSegmenting}
+          className="mt-3 w-full rounded-md border border-cyan-300 bg-white px-5 py-3 text-sm font-medium text-cyan-700 transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+          onClick={() => void startSegmentation()}
+        >
+          {isSegmenting ? "正在拆解" : "拆解 Prompt"}
         </button>
       </div>
 
@@ -245,6 +376,14 @@ export function AnalyzeWorkspace() {
             </p>
           </section>
         ) : null}
+
+        {isSegmenting ? (
+          <LoadingState title="正在拆解 Prompt 模块，标注可替换字段" description="请稍候，文本模型正在拆解 reverse prompt 和 negative prompt。" />
+        ) : null}
+
+        {segmentError ? <ErrorState title="拆解失败" description={segmentError} actionLabel="重新拆解" /> : null}
+
+        {segmentation ? <SegmentationView segmentation={segmentation} /> : null}
       </div>
     </div>
   );

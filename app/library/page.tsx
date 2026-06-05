@@ -9,6 +9,7 @@ const prompts = [
     score: "4.8",
     createdAt: "2026-06-06",
     summary: "适合城市夜景、人像海报、潮流服饰主视觉，强调湿润反光和霓虹轮廓光。",
+    hasSegments: true,
   },
   {
     title: "复古杂志静物",
@@ -16,6 +17,7 @@ const prompts = [
     score: "4.6",
     createdAt: "2026-06-05",
     summary: "适合香水、饰品、手作产品，保留胶片颗粒、暖色台灯和纸张纹理。",
+    hasSegments: false,
   },
   {
     title: "自然光家居场景",
@@ -23,6 +25,7 @@ const prompts = [
     score: "4.7",
     createdAt: "2026-06-04",
     summary: "适合家居、软装和日用品，强调清晨自然光、浅色空间和真实材质触感。",
+    hasSegments: true,
   },
 ];
 
@@ -50,12 +53,21 @@ export default function LibraryPage() {
 
       <section className="grid gap-4 lg:grid-cols-3">
         {prompts.map((prompt) => (
-          <PromptCard key={prompt.title} {...prompt} />
+          <div key={prompt.title} className="space-y-2">
+            <PromptCard {...prompt} />
+            <span
+              className={`inline-flex rounded-md px-3 py-1 text-sm font-medium ${
+                prompt.hasSegments ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {prompt.hasSegments ? "已生成 Prompt 模块" : "未拆解 Prompt"}
+            </span>
+          </div>
         ))}
       </section>
 
       <div className="mt-6">
-        <EmptyState title="暂无更多 Prompt" description="后续接入数据库后，这里会展示真实保存的图片和 Prompt 记录。" />
+        <EmptyState title="暂无更多 Prompt" description="后续接入数据库后，这里会展示真实保存的图片、Prompt 和拆解模块记录。" />
       </div>
     </AppShell>
   );
