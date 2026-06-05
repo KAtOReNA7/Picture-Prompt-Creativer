@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToCollectionPanel } from "@/components/collections/add-to-collection-panel";
 import { ImageGenerationPanel } from "@/components/generation/image-generation-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { LibraryDetailActions } from "@/components/library/library-detail-actions";
 import { PromptTemplateEditor } from "@/components/prompt-variants/prompt-template-editor";
 import { PromptVariantActions } from "@/components/prompt-variants/prompt-variant-actions";
+import { AnalysisTagManager } from "@/components/tags/analysis-tag-manager";
 import { CopyButton } from "@/components/ui/copy-button";
 import { prisma } from "@/lib/db/prisma";
 
@@ -77,6 +79,10 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
       variants: {
         orderBy: { createdAt: "desc" },
       },
+      tags: {
+        include: { tag: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -84,6 +90,8 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
     notFound();
   }
 
+  const allTags = await prisma.tag.findMany({ orderBy: { createdAt: "desc" } });
+  const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
   const fusionIds = analysis.fusions.map((fusion) => fusion.id);
   const generatedImages = await prisma.generatedImage.findMany({
     where: {
@@ -194,6 +202,29 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
         </div>
       </section>
 
+      <AnalysisTagManager
+        analysisId={analysis.id}
+        initialTags={analysis.tags.map((item) => ({
+          id: item.tag.id,
+          name: item.tag.name,
+          color: item.tag.color,
+          description: item.tag.description,
+        }))}
+        allTags={allTags.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          color: tag.color,
+          description: tag.description,
+        }))}
+      />
+
+      <section className="mt-6 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-slate-950">加入合集</h2>
+        <div className="mt-4">
+          <AddToCollectionPanel itemType="analysis" itemId={analysis.id} collections={collections} />
+        </div>
+      </section>
+
       <section className="mt-6 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -275,6 +306,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                 <div className="mt-4">
                   <PromptVariantActions variant={variant} />
                 </div>
+                <AddToCollectionPanel itemType="prompt_variant" itemId={variant.id} collections={collections} compact />
               </article>
             ))}
           </div>
@@ -378,6 +410,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                   </a>
                   <CopyButton text={generatedFileUrl(image.id)} label="复制地址" />
                 </div>
+                <AddToCollectionPanel itemType="generated_image" itemId={image.id} collections={collections} compact />
               </article>
             ))}
           </div>

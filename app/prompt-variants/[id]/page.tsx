@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToCollectionPanel } from "@/components/collections/add-to-collection-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { PromptVariantActions } from "@/components/prompt-variants/prompt-variant-actions";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -58,6 +59,7 @@ export default async function PromptVariantDetailPage({ params }: PromptVariantD
     orderBy: { createdAt: "desc" },
     take: 20,
   });
+  const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
 
   return (
     <AppShell>
@@ -123,6 +125,8 @@ export default async function PromptVariantDetailPage({ params }: PromptVariantD
               <PromptVariantActions variant={variant} />
             </div>
           </section>
+
+          <AddToCollectionPanel itemType="prompt_variant" itemId={variant.id} collections={collections} />
         </div>
       </section>
 

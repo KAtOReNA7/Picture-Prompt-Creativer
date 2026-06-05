@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
-import { LibraryCardActions } from "@/components/library/library-card-actions";
+import { LibraryBulkManager } from "@/components/library/library-bulk-manager";
 import { EmptyState } from "@/components/ui/empty-state";
 import { prisma } from "@/lib/db/prisma";
 
@@ -9,6 +9,7 @@ type LibraryPageProps = {
     q?: string;
     hasSegments?: string;
     hasFusions?: string;
+    tagId?: string;
     sort?: string;
   }>;
 };
@@ -32,6 +33,7 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
   const q = params.q?.trim();
   const hasSegments = params.hasSegments;
   const hasFusions = params.hasFusions;
+  const tagId = params.tagId;
   const sort = params.sort ?? "latest";
 
   const analyses = await prisma.promptAnalysis.findMany({
@@ -50,6 +52,7 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
       ...(hasSegments === "false" ? { segments: { none: {} } } : {}),
       ...(hasFusions === "true" ? { fusions: { some: {} } } : {}),
       ...(hasFusions === "false" ? { fusions: { none: {} } } : {}),
+      ...(tagId ? { tags: { some: { tagId } } } : {}),
     },
     orderBy: { createdAt: sort === "oldest" ? "asc" : "desc" },
     take: 60,
@@ -69,6 +72,14 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
       fusions: {
         select: {
           id: true,
+        },
+      },
+      tags: {
+        include: {
+          tag: true,
+        },
+        orderBy: {
+          createdAt: "asc",
         },
       },
       _count: {
@@ -105,6 +116,8 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
 export default async function LibraryPage({ searchParams }: LibraryPageProps) {
   const params = await searchParams;
   const analyses = await getAnalyses(params);
+  const tags = await prisma.tag.findMany({ orderBy: { createdAt: "desc" } });
+  const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
 
   return (
     <AppShell>
@@ -124,7 +137,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
         </Link>
       </div>
 
-      <form className="mb-6 grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_auto]">
+      <form className="mb-6 grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_0.8fr_auto]">
         <input
           name="q"
           defaultValue={params.q ?? ""}
@@ -158,58 +171,45 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
           <option value="oldest">最早优先</option>
           <option value="mostFusions">迁移次数最多</option>
         </select>
+        <select
+          name="tagId"
+          defaultValue={params.tagId ?? ""}
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+        >
+          <option value="">标签不限</option>
+          {tags.map((tag) => (
+            <option key={tag.id} value={tag.id}>
+              {tag.name}
+            </option>
+          ))}
+        </select>
         <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
           筛选
         </button>
       </form>
 
       {analyses.length > 0 ? (
-        <section className="grid gap-4 lg:grid-cols-3">
-          {analyses.map((analysis) => {
-            const previewUrl = getPreviewUrl(analysis.image);
-
-            return (
-              <article key={analysis.id} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-                {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previewUrl} alt={analysis.title ?? "Prompt 参考图"} className="h-44 w-full rounded-md object-cover" />
-                ) : (
-                  <div className="flex h-44 w-full items-center justify-center rounded-md bg-slate-100 text-sm font-medium text-slate-500">
-                    无参考图
-                  </div>
-                )}
-
-                <div className="mt-4">
-                  <h2 className="line-clamp-1 text-lg font-semibold text-slate-950">{analysis.title ?? "未命名 Prompt 模板"}</h2>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
-                    {analysis.styleSummary ?? analysis.topicPotential ?? analysis.visualSubject ?? "暂无摘要"}
-                  </p>
-                </div>
-
-                <dl className="mt-4 grid gap-2 text-sm">
-                  <div className="rounded-md bg-slate-50 p-3">
-                    <dt className="font-semibold text-slate-900">画面主体</dt>
-                    <dd className="mt-1 line-clamp-2 text-slate-600">{analysis.visualSubject ?? "未填写"}</dd>
-                  </div>
-                </dl>
-
-                <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium">
-                  <span className={analysis._count.segments > 0 ? "rounded-md bg-emerald-50 px-3 py-1 text-emerald-700" : "rounded-md bg-slate-100 px-3 py-1 text-slate-600"}>
-                    Prompt 模块：{analysis._count.segments}
-                  </span>
-                  <span className="rounded-md bg-cyan-50 px-3 py-1 text-cyan-700">风格迁移：{analysis._count.fusions}</span>
-                  <span className="rounded-md bg-amber-50 px-3 py-1 text-amber-700">模板版本：{analysis._count.variants}</span>
-                  <span className="rounded-md bg-violet-50 px-3 py-1 text-violet-700">生成图：{analysis.generatedCount}</span>
-                  <span className="rounded-md bg-slate-100 px-3 py-1 text-slate-600">{formatDate(analysis.createdAt)}</span>
-                </div>
-
-                <div className="mt-4">
-                  <LibraryCardActions analysisId={analysis.id} />
-                </div>
-              </article>
-            );
-          })}
-        </section>
+        <LibraryBulkManager
+          collections={collections}
+          analyses={analyses.map((analysis) => ({
+            id: analysis.id,
+            title: analysis.title,
+            styleSummary: analysis.styleSummary,
+            visualSubject: analysis.visualSubject,
+            topicPotential: analysis.topicPotential,
+            createdAtText: formatDate(analysis.createdAt),
+            previewUrl: getPreviewUrl(analysis.image),
+            segmentsCount: analysis._count.segments,
+            fusionsCount: analysis._count.fusions,
+            variantsCount: analysis._count.variants,
+            generatedCount: analysis.generatedCount,
+            tags: analysis.tags.map((item) => ({
+              id: item.tag.id,
+              name: item.tag.name,
+              color: item.tag.color,
+            })),
+          }))}
+        />
       ) : (
         <EmptyState
           title="暂无 Prompt 记录"

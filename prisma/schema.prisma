@@ -41,6 +41,7 @@ model PromptAnalysis {
   segments       PromptSegment[]
   fusions        PromptFusion[]
   variants       PromptVariant[]
+  tags           PromptAnalysisTag[]
 }
 
 model PromptSegment {
@@ -117,4 +118,48 @@ model GeneratedImageEvaluation {
   improvedNegativePrompt   String?
   rawJson                  String?
   createdAt                DateTime       @default(now())
+}
+
+model Tag {
+  id          String              @id @default(cuid())
+  name        String              @unique
+  color       String?
+  description String?
+  createdAt   DateTime            @default(now())
+  analyses    PromptAnalysisTag[]
+}
+
+model PromptAnalysisTag {
+  id         String         @id @default(cuid())
+  analysisId String
+  analysis   PromptAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag            @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+
+  @@unique([analysisId, tagId])
+}
+
+model Collection {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  useCase     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  items       CollectionItem[]
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  itemType     String
+  itemId       String
+  note         String?
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  @@index([itemType, itemId])
+  @@index([collectionId])
 }

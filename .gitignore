@@ -14,5 +14,7 @@ uploads/
 uploads/**
 uploads/generated/
 uploads/generated/**
+exports/
+exports/**
 *.log
 *.tsbuildinfo

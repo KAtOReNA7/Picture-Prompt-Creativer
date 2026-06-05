@@ -26,6 +26,10 @@ const features = [
     title: "模板编辑与版本",
     description: "在库详情中手动替换 Prompt 模块，组合新版本，并可继续 AI 润色和生成测试图。",
   },
+  {
+    title: "标签、合集与导出",
+    description: "按用途、风格、题材和项目整理资产，批量加入合集，并导出 JSON 或 Markdown。",
+  },
 ];
 
 const imageFlow = ["上传图片", "AI 分析", "逆向 Prompt", "拆解 Prompt", "输入新需求", "风格迁移生成新 Prompt"];

@@ -15,6 +15,8 @@ export async function GET(request: Request) {
   const q = url.searchParams.get("q")?.trim();
   const hasSegments = url.searchParams.get("hasSegments");
   const hasFusions = url.searchParams.get("hasFusions");
+  const tagId = url.searchParams.get("tagId")?.trim();
+  const tagName = url.searchParams.get("tagName")?.trim();
   const sort = url.searchParams.get("sort") ?? "latest";
   const limit = parseLimit(url.searchParams.get("limit"));
   const where = {
@@ -32,6 +34,8 @@ export async function GET(request: Request) {
     ...(hasSegments === "false" ? { segments: { none: {} } } : {}),
     ...(hasFusions === "true" ? { fusions: { some: {} } } : {}),
     ...(hasFusions === "false" ? { fusions: { none: {} } } : {}),
+    ...(tagId ? { tags: { some: { tagId } } } : {}),
+    ...(tagName ? { tags: { some: { tag: { name: tagName } } } } : {}),
   };
 
   const analyses = await prisma.promptAnalysis.findMany({
@@ -54,6 +58,14 @@ export async function GET(request: Request) {
           id: true,
           originalName: true,
           publicPath: true,
+        },
+      },
+      tags: {
+        include: {
+          tag: true,
+        },
+        orderBy: {
+          createdAt: "asc",
         },
       },
       _count: {
@@ -113,6 +125,11 @@ export async function GET(request: Request) {
       createdAt: analysis.createdAt.toISOString(),
       imageOriginalName: analysis.image?.originalName ?? null,
       imagePreviewUrl: analysis.image ? (analysis.image.publicPath ?? `/api/images/${analysis.image.id}/file`) : null,
+      tags: analysis.tags.map((item) => ({
+        id: item.tag.id,
+        name: item.tag.name,
+        color: item.tag.color,
+      })),
       generatedCount: generatedCountByAnalysisId.get(analysis.id) ?? 0,
     })),
   });

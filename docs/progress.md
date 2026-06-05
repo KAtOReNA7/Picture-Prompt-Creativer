@@ -391,3 +391,52 @@
 - `/prompt-variants/[id]`：HTTP 200，显示组合 Prompt、负面 Prompt、编辑模块 JSON 和生成历史，无 Next 错误覆盖层。
 - `/library`：HTTP 200，分析卡片显示模板版本数量。
 - 从 PromptVariant 生成测试图：成功，`sourceType=custom_prompt`，`sourceId=PromptVariant.id`，新增生成图记录并保存文件。
+
+## 阶段 11：分类标签、合集与批量管理
+
+完成内容：
+
+- 新增 `Tag`、`PromptAnalysisTag`、`Collection`、`CollectionItem` Prisma 模型。
+- 新增数据库迁移 `tags_collections_export`。
+- 新增 `.gitignore` 忽略 `exports/`。
+- 新增标签 API：`GET/POST /api/tags`、`PATCH/DELETE /api/tags/[id]`。
+- 新增分析标签绑定 API：`POST /api/analyses/[id]/tags`、`POST /api/analyses/[id]/tags/quick-add`。
+- 新增 AI 推荐标签 API：`POST /api/analyses/[id]/suggest-tags`，只返回建议，不自动保存。
+- 扩展 `/api/analyses`，支持 `tagId` / `tagName` 筛选，并返回标签数组。
+- 新增合集 API：`GET/POST /api/collections`、`GET/PATCH/DELETE /api/collections/[id]`、`POST /api/collections/[id]/items`、`DELETE /api/collections/[id]/items/[itemId]`。
+- 新增导出 API：`POST /api/export`、`GET /api/export/[filename]`，支持 JSON / Markdown。
+- 新增 `/collections` 合集列表与创建页面。
+- 新增 `/collections/[id]` 合集详情、编辑、按类型筛选、移除素材和导出页面。
+- 更新顶部导航，增加“合集”入口。
+- 更新 `/library`，支持标签筛选、卡片标签展示、多选、批量添加标签、批量加入合集和批量导出。
+- 更新 `/library/[id]`，新增标签管理、快速新建标签、AI 推荐标签、加入合集。
+- 更新 `/prompt-variants/[id]` 和 `/generated-images/[id]`，支持加入合集。
+- 更新首页，增加标签、合集和批量导出说明。
+- 新增 `docs/tags-collections-export.md`。
+
+验证结果：
+
+- `npx prisma generate`：成功
+- `npx prisma migrate dev --name tags_collections_export`：成功
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功
+
+页面与接口测试：
+
+- `/api/tags`：成功创建测试标签。
+- `/api/analyses/[id]/tags`：成功覆盖式绑定标签。
+- `/api/analyses/[id]/tags/quick-add`：成功自动创建并绑定标签。
+- `/api/analyses/[id]/suggest-tags`：成功调用 `OPENAI_TEXT_MODEL`，返回 9 条建议，未自动保存。
+- `/api/analyses?tagId=...`：成功按标签筛选 Prompt 库。
+- `/api/collections`：成功创建测试合集。
+- `/api/collections/[id]/items`：成功添加 `analysis`、`prompt_variant`、`generated_image` 三类素材。
+- `/api/collections/[id]`：成功返回三类 item 摘要。
+- `/collections`：HTTP 200，无错误覆盖层。
+- `/collections/[id]`：HTTP 200，无错误覆盖层。
+- `/api/export`：成功导出合集 JSON 和 Markdown。
+- `/api/export/[filename]`：JSON / Markdown 下载接口均可用。
+- `/library`：HTTP 200，支持标签筛选和批量操作 UI。
+- `/library/[id]`：HTTP 200，支持标签管理、AI 推荐标签和加入合集 UI。
+- `/prompt-variants/[id]`：HTTP 200，支持加入合集 UI。
+- `/generated-images/[id]`：HTTP 200，支持加入合集 UI。

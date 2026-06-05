@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToCollectionPanel } from "@/components/collections/add-to-collection-panel";
 import { GeneratedImageDetailWorkspace } from "@/components/generation/generated-image-detail-workspace";
 import { AppShell } from "@/components/layout/app-shell";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -58,6 +59,7 @@ export default async function GeneratedImageDetailPage({ params }: GeneratedImag
   }
 
   const latestEvaluation = image.evaluations[0] ?? null;
+  const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
   const initialEvaluation = latestEvaluation
     ? {
         overallScore: latestEvaluation.overallScore,
@@ -150,6 +152,8 @@ export default async function GeneratedImageDetailPage({ params }: GeneratedImag
             </div>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">{image.negativePrompt ?? "无"}</p>
           </section>
+
+          <AddToCollectionPanel itemType="generated_image" itemId={image.id} collections={collections} />
         </div>
       </section>
 

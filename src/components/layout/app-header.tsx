@@ -4,6 +4,7 @@ const navItems = [
   { href: "/", label: "首页" },
   { href: "/analyze", label: "图片逆向分析" },
   { href: "/library", label: "Prompt 库" },
+  { href: "/collections", label: "合集" },
   { href: "/import", label: "导入 Prompt" },
   { href: "/fusion", label: "风格迁移" },
   { href: "/generated-images", label: "生成图" },
