@@ -4,6 +4,7 @@ const navItems = [
   { href: "/", label: "首页" },
   { href: "/analyze", label: "图片逆向分析" },
   { href: "/library", label: "Prompt 库" },
+  { href: "/import", label: "导入 Prompt" },
   { href: "/fusion", label: "风格迁移" },
   { href: "/settings", label: "系统设置" },
   { href: "/diagnostics", label: "环境诊断" },
@@ -19,7 +20,7 @@ export function AppHeader() {
           </span>
           <span>
             <span className="block text-base font-semibold text-slate-950">图像 Prompt 创作器</span>
-            <span className="block text-xs text-slate-500">逆向分析与风格迁移工作台</span>
+            <span className="block text-xs text-slate-500">逆向分析、Prompt 拆解与风格迁移工作台</span>
           </span>
         </Link>
 

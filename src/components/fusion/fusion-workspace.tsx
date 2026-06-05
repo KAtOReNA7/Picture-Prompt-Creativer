@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 
 type AnalysisListItem = {
   id: string;
-  imageId: string;
+  imageId: string | null;
   title: string | null;
   styleSummary: string | null;
   visualSubject: string | null;
@@ -18,7 +19,7 @@ type AnalysisListItem = {
   segmentsCount: number;
   fusionsCount: number;
   createdAt: string;
-  imagePreviewUrl: string;
+  imagePreviewUrl: string | null;
 };
 
 type AnalysesResponse =
@@ -63,26 +64,6 @@ type FusionResponse =
       error: string;
     };
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }
-
-  return (
-    <button
-      type="button"
-      className="rounded-md border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-cyan-700 transition hover:bg-cyan-50"
-      onClick={() => void copy()}
-    >
-      {copied ? "已复制" : "一键复制"}
-    </button>
-  );
-}
-
 function ScorePill({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md bg-slate-50 p-4">
@@ -105,6 +86,21 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
   );
 }
 
+function ImagePreview({ analysis }: { analysis: AnalysisListItem }) {
+  if (!analysis.imagePreviewUrl) {
+    return (
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-medium text-slate-500">
+        无图
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={analysis.imagePreviewUrl} alt={analysis.title ?? "分析记录"} className="h-16 w-16 shrink-0 rounded-md object-cover" />
+  );
+}
+
 export function FusionWorkspace() {
   const [analyses, setAnalyses] = useState<AnalysisListItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -121,7 +117,7 @@ export function FusionWorkspace() {
     fetch("/api/analyses?limit=50", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error("历史分析记录加载失败。");
+          throw new Error("历史分析记录加载失败");
         }
 
         return (await response.json()) as AnalysesResponse;
@@ -141,7 +137,7 @@ export function FusionWorkspace() {
       })
       .catch(() => {
         if (isActive) {
-          setError("无法加载历史分析记录。");
+          setError("无法加载历史分析记录");
         }
       })
       .finally(() => {
@@ -159,12 +155,12 @@ export function FusionWorkspace() {
 
   async function startFusion() {
     if (!selectedAnalysis) {
-      setFusionError("请先选择一个历史分析记录。");
+      setFusionError("请先选择一个历史分析记录");
       return;
     }
 
     if (!requirement.trim()) {
-      setFusionError("请先输入新的文字需求。");
+      setFusionError("请先输入新的文字需求");
       return;
     }
 
@@ -186,20 +182,20 @@ export function FusionWorkspace() {
       const data = (await response.json()) as FusionResponse;
 
       if (!response.ok || !data.ok) {
-        setFusionError(data.ok ? "风格迁移 Prompt 生成失败。" : data.error);
+        setFusionError(data.ok ? "风格迁移 Prompt 生成失败" : data.error);
         return;
       }
 
       setResult(data.result);
     } catch {
-      setFusionError("风格迁移 Prompt 生成失败，请检查网络或稍后重试。");
+      setFusionError("风格迁移 Prompt 生成失败，请检查网络或稍后重试");
     } finally {
       setIsFusing(false);
     }
   }
 
   if (isLoading) {
-    return <LoadingState title="正在加载历史分析记录" description="请稍候，系统正在读取可用于风格迁移的图片分析结果。" />;
+    return <LoadingState title="正在加载历史分析记录" description="请稍候，系统正在读取可用于风格迁移的 Prompt 模板。" />;
   }
 
   if (error) {
@@ -210,7 +206,7 @@ export function FusionWorkspace() {
     return (
       <EmptyState
         title="暂无可用于风格迁移的分析记录"
-        description="请先前往图片逆向分析页面上传图片并完成 AI 分析，再回来生成风格迁移 Prompt。"
+        description="请先前往图片逆向分析页面上传图片并完成 AI 分析，或者直接导入已有 Prompt。"
         actionLabel="去图片逆向分析"
       />
     );
@@ -235,8 +231,7 @@ export function FusionWorkspace() {
               }}
             >
               <div className="flex gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={analysis.imagePreviewUrl} alt={analysis.title ?? "分析图片"} className="h-16 w-16 rounded-md object-cover" />
+                <ImagePreview analysis={analysis} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-950">{analysis.title ?? "未命名分析"}</p>
                   <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{analysis.styleSummary ?? "暂无风格摘要"}</p>
@@ -256,8 +251,14 @@ export function FusionWorkspace() {
         {selectedAnalysis ? (
           <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={selectedAnalysis.imagePreviewUrl} alt={selectedAnalysis.title ?? "分析图片"} className="h-56 w-full rounded-md object-cover" />
+              {selectedAnalysis.imagePreviewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selectedAnalysis.imagePreviewUrl} alt={selectedAnalysis.title ?? "分析图片"} className="h-56 w-full rounded-md object-cover" />
+              ) : (
+                <div className="flex h-56 w-full items-center justify-center rounded-md bg-slate-100 text-sm font-medium text-slate-500">
+                  无参考图
+                </div>
+              )}
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">{selectedAnalysis.title ?? "未命名分析"}</h2>
                 <dl className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -318,7 +319,7 @@ export function FusionWorkspace() {
         {result ? (
           <section className="rounded-md border border-cyan-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-950">{result.title}</h2>
-            <p className="mt-2 text-sm text-slate-500">本阶段只生成 prompt，不生成图片。</p>
+            <p className="mt-2 text-sm text-slate-500">本阶段只生成 Prompt，不生成图片。</p>
 
             <div className="mt-6 rounded-md border border-cyan-200 bg-cyan-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">

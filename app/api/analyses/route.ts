@@ -13,19 +13,31 @@ function parseLimit(value: string | null): number {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const q = url.searchParams.get("q")?.trim();
+  const hasSegments = url.searchParams.get("hasSegments");
+  const hasFusions = url.searchParams.get("hasFusions");
+  const sort = url.searchParams.get("sort") ?? "latest";
   const limit = parseLimit(url.searchParams.get("limit"));
-  const analyses = await prisma.promptAnalysis.findMany({
-    where: q
+  const where = {
+    ...(q
       ? {
           OR: [
             { title: { contains: q } },
             { styleSummary: { contains: q } },
             { visualSubject: { contains: q } },
+            { reversePrompt: { contains: q } },
           ],
         }
-      : undefined,
-    orderBy: { createdAt: "desc" },
-    take: limit,
+      : {}),
+    ...(hasSegments === "true" ? { segments: { some: {} } } : {}),
+    ...(hasSegments === "false" ? { segments: { none: {} } } : {}),
+    ...(hasFusions === "true" ? { fusions: { some: {} } } : {}),
+    ...(hasFusions === "false" ? { fusions: { none: {} } } : {}),
+  };
+
+  const analyses = await prisma.promptAnalysis.findMany({
+    where,
+    orderBy: { createdAt: sort === "oldest" ? "asc" : "desc" },
+    take: sort === "mostFusions" ? Math.max(limit, 50) : limit,
     select: {
       id: true,
       imageId: true,
@@ -39,6 +51,8 @@ export async function GET(request: Request) {
       createdAt: true,
       image: {
         select: {
+          id: true,
+          originalName: true,
           publicPath: true,
         },
       },
@@ -51,9 +65,14 @@ export async function GET(request: Request) {
     },
   });
 
+  const sortedAnalyses =
+    sort === "mostFusions"
+      ? [...analyses].sort((a, b) => b._count.fusions - a._count.fusions || b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit)
+      : analyses;
+
   return Response.json({
     ok: true,
-    analyses: analyses.map((analysis) => ({
+    analyses: sortedAnalyses.map((analysis) => ({
       id: analysis.id,
       imageId: analysis.imageId,
       title: analysis.title,
@@ -66,7 +85,8 @@ export async function GET(request: Request) {
       segmentsCount: analysis._count.segments,
       fusionsCount: analysis._count.fusions,
       createdAt: analysis.createdAt.toISOString(),
-      imagePreviewUrl: analysis.image.publicPath ?? `/api/images/${analysis.imageId}/file`,
+      imageOriginalName: analysis.image?.originalName ?? null,
+      imagePreviewUrl: analysis.image ? (analysis.image.publicPath ?? `/api/images/${analysis.image.id}/file`) : null,
     })),
   });
 }

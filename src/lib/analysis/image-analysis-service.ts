@@ -11,7 +11,7 @@ import { validateImageAnalysisResult, type ImageAnalysisResult } from "@/lib/ai/
 type AnalyzeImageOutput = {
   analysis: {
     id: string;
-    imageId: string;
+    imageId: string | null;
     title: string | null;
     styleSummary: string | null;
     visualSubject: string | null;

@@ -249,3 +249,36 @@
 - `negativePromptEnglish`：英文。
 - `/api/analyses` 能返回 `fusionsCount`，本次测试记录显示为 1。
 - 浏览器检查：`/fusion` 有“生成风格迁移 Prompt”入口，`/library` 显示风格迁移数量。
+## 阶段 7：Prompt 库、详情页与导入工作流
+
+完成内容：
+
+- 将 `PromptAnalysis.imageId` 调整为可选，支持无参考图的纯 Prompt 模板。
+- 新增 `GET /api/analyses/[id]`，返回分析详情、参考图、PromptSegment 和 PromptFusion 历史。
+- 新增 `DELETE /api/analyses/[id]`，删除分析记录并级联删除拆解和融合记录，但保留 ImageAsset 与本地图片文件。
+- 扩展 `GET /api/analyses`，支持 `q`、`hasSegments`、`hasFusions`、`sort` 和 `limit`。
+- 新增 `POST /api/prompts/import`，支持导入已有英文 Prompt 和可选参考图。
+- 新增 `/library/[id]` 详情页，展示原图、分析字段、reverse prompt、negative prompt、Prompt 模块和风格迁移历史。
+- 更新 `/library`，支持真实搜索、筛选、排序、详情跳转、重新拆解和删除。
+- 新增 `/import` 页面，用于导入已有 Prompt。
+- 更新首页和顶部导航，加入“导入 Prompt”入口。
+- 调整 `/fusion`，支持选择无参考图的 PromptAnalysis 记录。
+- 新增 `docs/prompt-library.md`。
+- 可选的 `/api/prompts/organize` 本阶段未实现，后续如需要可作为独立阶段接入 OPENAI_TEXT_MODEL。
+
+验证结果：
+
+- `npx prisma generate`：成功
+- `npx prisma migrate dev --name prompt_library_import`：成功
+- `npm run lint`：成功
+- `npm run build`：成功
+
+页面与接口测试：
+
+- `/api/prompts/import`：成功导入无参考图英文 Prompt。
+- `/api/analyses`：支持搜索、拆解状态筛选和排序，返回无参考图记录。
+- `/api/analyses/[id]`：成功返回详情、segments 和 fusions。
+- `/api/prompts/segment`：成功生成 11 个模块；重复拆解后仍保持 11 个模块，旧结果被替换。
+- `/api/prompts/fuse`：成功生成英文 finalPromptEnglish / negativePromptEnglish，并新增 PromptFusion。
+- `DELETE /api/analyses/[id]`：成功删除临时导入记录，删除后详情接口返回 404。
+- `/library`、`/library/[id]`、`/fusion?analysisId=...`、`/import`：浏览器渲染正常，无错误覆盖层。

@@ -23,8 +23,8 @@ model ImageAsset {
 
 model PromptAnalysis {
   id             String          @id @default(cuid())
-  imageId        String
-  image          ImageAsset      @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  imageId        String?
+  image          ImageAsset?     @relation(fields: [imageId], references: [id], onDelete: Cascade)
   title          String?
   styleSummary   String?
   visualSubject  String?
