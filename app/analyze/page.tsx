@@ -2,6 +2,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
+import { ImageUploader } from "@/components/upload/image-uploader";
 
 const resultItems = [
   ["画面主体", "一位穿复古风衣的女性站在雨夜街角，背景有霓虹招牌和湿润路面反光。"],
@@ -28,28 +29,15 @@ export default function AnalyzePage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-        <section className="rounded-md border border-dashed border-cyan-300 bg-white p-6">
-          <div className="flex min-h-72 flex-col items-center justify-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-md bg-cyan-50 text-lg font-semibold text-cyan-700">
-              图
-            </div>
-            <h2 className="text-lg font-semibold text-slate-950">上传图片区域</h2>
-            <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
-              这里将接入图片上传功能，当前展示 mock 状态，支持拖拽或点击选择图片。
-            </p>
-            <button className="mt-5 rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-700">
-              选择图片
-            </button>
-          </div>
-        </section>
+        <ImageUploader />
 
         <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-slate-950">分析结果 mock</h2>
-              <p className="mt-1 text-sm text-slate-500">真实模型接入前用于确认信息结构。</p>
+              <p className="mt-1 text-sm text-slate-500">待接入 AI 分析，当前用于确认信息结构。</p>
             </div>
-            <span className="rounded-md bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">已生成</span>
+            <span className="rounded-md bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">待接入 AI 分析</span>
           </div>
           <dl className="mt-6 grid gap-4">
             {resultItems.map(([label, value]) => (

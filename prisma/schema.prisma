@@ -7,15 +7,60 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model PromptArchive {
-  id             String   @id @default(cuid())
-  title          String
-  category       String?
-  imagePath      String?
-  sourcePrompt   String?
-  analysisJson   String?
+model ImageAsset {
+  id           String           @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  localPath    String
+  publicPath   String?
+  createdAt    DateTime         @default(now())
+  analyses     PromptAnalysis[]
+}
+
+model PromptAnalysis {
+  id             String          @id @default(cuid())
+  imageId        String
+  image          ImageAsset      @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  title          String?
+  styleSummary   String?
+  visualSubject  String?
+  composition    String?
+  colorPalette   String?
+  lighting       String?
+  texture        String?
+  eraFeeling     String?
+  topicPotential String?
   reversePrompt  String?
   negativePrompt String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  rawJson        String?
+  createdAt      DateTime        @default(now())
+  segments       PromptSegment[]
+  fusions        PromptFusion[]
+}
+
+model PromptSegment {
+  id            String         @id @default(cuid())
+  analysisId    String
+  analysis      PromptAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  type          String
+  label         String
+  content       String
+  isReplaceable Boolean        @default(false)
+  replaceHint   String?
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+}
+
+model PromptFusion {
+  id              String         @id @default(cuid())
+  analysisId      String
+  analysis        PromptAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  userRequirement String
+  fusedPrompt     String
+  changeSummary   String?
+  createdAt       DateTime       @default(now())
 }

@@ -90,3 +90,40 @@
 
 - 进入阶段 2：建立服务端环境变量模块、Prisma Client 初始化和 SQLite 数据库迁移。
 - 后续将 mock 数据替换为真实 API 和数据库数据。
+
+## 2026-06-06 阶段 2：Prisma + SQLite + 图片上传
+
+已完成：
+
+- 将 Prisma 数据模型更新为 `ImageAsset`、`PromptAnalysis`、`PromptSegment`、`PromptFusion`。
+- 使用 SQLite provider，数据库连接通过 `DATABASE_URL`，运行时默认值为 `file:./dev.db`。
+- 创建服务端 Prisma 工具 `src/lib/db/prisma.ts`，避免 Next.js dev 模式重复创建 `PrismaClient`。
+- 新增图片上传接口：`POST /api/images/upload`。
+- 新增图片访问接口：`GET /api/images/[id]/file`。
+- 图片上传支持 `image/jpeg`、`image/png`、`image/webp`，默认最大 15MB，可通过 `MAX_UPLOAD_MB` 配置。
+- 上传文件保存到 `uploads/images/`，文件名使用 `crypto.randomUUID()` 生成，避免中文名和重复名问题。
+- 上传成功后写入数据库 `ImageAsset` 记录，并返回图片基础信息和访问路径。
+- 更新 `/analyze` 页面，接入真实上传组件，支持点击选择和拖拽上传。
+- 上传过程中显示中文 loading，失败时显示中文 error，成功后显示图片预览和基础信息。
+- 保留 mock 分析结果，并明确标注“待接入 AI 分析”。
+- 新增上传 API 文档 `docs/upload.md`。
+- 更新 `.gitignore`，忽略 `.env`、`.env.local`、`dev.db`、`prisma/dev.db`、`uploads/` 和 `uploads/**`。
+
+实现说明：
+
+- Prisma 7 不再支持在 schema datasource 中配置 `url = env("DATABASE_URL")`，与本阶段要求冲突，因此已切换到 Prisma 6.19.3，以保留标准 Prisma schema + SQLite + migrate dev 工作流。
+- 当前 Windows 环境下 Prisma 迁移引擎不能自动创建 SQLite 文件；预先创建空的 `prisma/dev.db` 后，`npx prisma migrate dev --name init` 成功执行。该数据库文件已被 Git 忽略。
+
+验证结果：
+
+- `npx prisma generate`：通过。
+- `npx prisma migrate dev --name init`：通过，已生成 `prisma/migrations/20260605170806_init/migration.sql`。
+- `npm run lint`：通过。
+- `npm run build`：通过。
+- 上传接口测试：通过，`POST /api/images/upload` 返回 `ok:true`。
+- 图片访问接口测试：通过，`GET /api/images/[id]/file` 返回 `HTTP 200 image/png`。
+
+下一步建议：
+
+- 进入阶段 3：接入视觉模型分析接口，基于上传图片生成中文结构化分析和英文 reverse prompt。
+- 增加上传记录列表或最近上传图片入口，方便从 `/analyze` 页面复用已上传图片。

@@ -5,7 +5,12 @@ dist
 coverage
 .env
 .env*.local
+.env.local
 *.db
 *.db-journal
+dev.db
+prisma/dev.db
+uploads/
+uploads/**
 *.log
 *.tsbuildinfo
