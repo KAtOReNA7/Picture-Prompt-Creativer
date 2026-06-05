@@ -60,6 +60,7 @@ export async function GET(request: Request) {
         select: {
           segments: true,
           fusions: true,
+          variants: true,
         },
       },
     },
@@ -108,6 +109,7 @@ export async function GET(request: Request) {
       reversePromptExists: Boolean(analysis.reversePrompt),
       segmentsCount: analysis._count.segments,
       fusionsCount: analysis._count.fusions,
+      variantsCount: analysis._count.variants,
       createdAt: analysis.createdAt.toISOString(),
       imageOriginalName: analysis.image?.originalName ?? null,
       imagePreviewUrl: analysis.image ? (analysis.image.publicPath ?? `/api/images/${analysis.image.id}/file`) : null,

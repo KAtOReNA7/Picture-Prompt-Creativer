@@ -75,6 +75,7 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
         select: {
           segments: true,
           fusions: true,
+          variants: true,
         },
       },
     },
@@ -197,6 +198,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
                     Prompt 模块：{analysis._count.segments}
                   </span>
                   <span className="rounded-md bg-cyan-50 px-3 py-1 text-cyan-700">风格迁移：{analysis._count.fusions}</span>
+                  <span className="rounded-md bg-amber-50 px-3 py-1 text-amber-700">模板版本：{analysis._count.variants}</span>
                   <span className="rounded-md bg-violet-50 px-3 py-1 text-violet-700">生成图：{analysis.generatedCount}</span>
                   <span className="rounded-md bg-slate-100 px-3 py-1 text-slate-600">{formatDate(analysis.createdAt)}</span>
                 </div>

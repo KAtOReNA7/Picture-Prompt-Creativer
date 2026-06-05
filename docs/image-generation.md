@@ -96,12 +96,14 @@
 
 - `analysis_reverse_prompt`：基于 `PromptAnalysis.reversePrompt` 生成。
 - `fusion_prompt`：基于 `PromptFusion.fusedPrompt` 生成。
-- `custom_prompt`：预留给自定义 Prompt 生成。
+- `custom_prompt`：基于自定义 Prompt、PromptVariant 或 GeneratedImageEvaluation 改良 Prompt 生成。
 
 `sourceId` 可对应：
 
 - `PromptAnalysis.id`
 - `PromptFusion.id`
+- `PromptVariant.id`
+- `GeneratedImageEvaluation.id`
 - `null`
 
 本阶段不建立外键，避免多态来源关系复杂化。

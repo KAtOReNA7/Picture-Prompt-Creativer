@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ImageGenerationPanel } from "@/components/generation/image-generation-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { LibraryDetailActions } from "@/components/library/library-detail-actions";
+import { PromptTemplateEditor } from "@/components/prompt-variants/prompt-template-editor";
+import { PromptVariantActions } from "@/components/prompt-variants/prompt-variant-actions";
 import { CopyButton } from "@/components/ui/copy-button";
 import { prisma } from "@/lib/db/prisma";
 
@@ -44,6 +46,13 @@ function sourceTypeLabel(sourceType: string): string {
   return sourceType;
 }
 
+function sourceTypeLabelForVariant(source: string): string {
+  if (source === "manual_compose") return "手动组合";
+  if (source === "ai_polished") return "AI 润色";
+  if (source === "segment_replace") return "模块替换";
+  return source;
+}
+
 function InfoBlock({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="rounded-md bg-slate-50 p-4">
@@ -63,6 +72,9 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
         orderBy: { sortOrder: "asc" },
       },
       fusions: {
+        orderBy: { createdAt: "desc" },
+      },
+      variants: {
         orderBy: { createdAt: "desc" },
       },
     },
@@ -220,6 +232,55 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
         ) : (
           <div className="mt-5 rounded-md border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
             暂无拆解模块，可点击页面顶部“重新拆解 Prompt”生成模块。
+          </div>
+        )}
+      </section>
+
+      <PromptTemplateEditor
+        analysisId={analysis.id}
+        segments={analysis.segments.map((segment) => ({
+          id: segment.id,
+          type: segment.type,
+          label: segment.label,
+          content: segment.content,
+          isReplaceable: segment.isReplaceable,
+          replaceHint: segment.replaceHint,
+          sortOrder: segment.sortOrder,
+        }))}
+        defaultNegativePrompt={analysis.negativePrompt}
+      />
+
+      <section className="mt-6 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-slate-950">模板版本</h2>
+        {analysis.variants.length > 0 ? (
+          <div className="mt-5 grid gap-4">
+            {analysis.variants.map((variant) => (
+              <article key={variant.id} className="rounded-md border border-slate-200 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-950">{variant.title}</h3>
+                    <p className="mt-1 text-xs text-slate-500">{formatDate(variant.createdAt)}</p>
+                  </div>
+                  <span className="rounded-md bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">{sourceTypeLabelForVariant(variant.source)}</span>
+                </div>
+                {variant.userNote ? <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-600">{variant.userNote}</p> : null}
+                <div className="mt-4 rounded-md bg-cyan-50 p-4">
+                  <p className="text-sm font-semibold text-cyan-950">Composed Prompt</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{variant.composedPrompt}</p>
+                </div>
+                <div className="mt-4 rounded-md bg-rose-50 p-4">
+                  <p className="text-sm font-semibold text-rose-950">Negative Prompt</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{variant.negativePrompt ?? "无"}</p>
+                </div>
+                <div className="mt-4">
+                  <PromptVariantActions variant={variant} />
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-md border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+            暂无模板版本。可以使用上方模板编辑器组合一个新的 Prompt。
           </div>
         )}
       </section>

@@ -22,6 +22,10 @@ const features = [
     title: "导入已有 Prompt",
     description: "把外部英文 Prompt 直接保存到库中，可选择参考图，再继续拆解和风格迁移。",
   },
+  {
+    title: "模板编辑与版本",
+    description: "在库详情中手动替换 Prompt 模块，组合新版本，并可继续 AI 润色和生成测试图。",
+  },
 ];
 
 const imageFlow = ["上传图片", "AI 分析", "逆向 Prompt", "拆解 Prompt", "输入新需求", "风格迁移生成新 Prompt"];
@@ -86,7 +90,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {features.map((feature) => (
           <article key={feature.title} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">{feature.title}</h2>

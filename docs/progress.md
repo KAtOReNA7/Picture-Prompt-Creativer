@@ -354,3 +354,40 @@
 - `/generated-images/[id]`：可访问，显示生成参数、评估结果、改良 Prompt 和再生成入口。
 - `/library/[id]`：生成图历史显示最近评分、查看详情和评估入口。
 - `/fusion`：顶部导航包含“生成图”；生成测试图成功后由生成面板提供详情和评估跳转。
+
+## 阶段 10：Prompt 模板编辑器与变量替换版本
+
+完成内容：
+
+- 新增 `PromptVariant` Prisma 模型，并给 `PromptAnalysis` 增加 `variants` 关系。
+- 新增数据库迁移 `prompt_variants`。
+- 新增 `src/lib/analysis/prompt-variant-service.ts`，支持按已拆解模块组合英文 Prompt、保存模板版本，并调用文本模型进行 AI 润色。
+- 新增 `POST /api/prompt-variants/compose`。
+- 新增 `POST /api/prompt-variants/[id]/polish`。
+- 新增 `GET /api/prompt-variants` 和 `GET /api/prompt-variants/[id]`。
+- 更新 `/library/[id]`，在 PromptSegment 后增加模板编辑器，支持启用/禁用模块、编辑英文片段、编辑负面 Prompt、保存版本、AI 润色和生成测试图。
+- 更新 `/library/[id]`，新增模板版本列表，展示版本来源、Prompt、negative prompt、复制、润色、生成测试图和详情跳转。
+- 新增 `/prompt-variants/[id]` 模板版本详情页，展示版本来源、原分析入口、组合 Prompt、负面 Prompt、编辑模块 JSON 和生成历史。
+- 更新 `/library` 和 `/api/analyses`，展示并返回 `variantsCount`。
+- 更新首页，增加模板编辑与版本保存说明。
+- 新增 `docs/prompt-variants.md`。
+- 更新 `docs/image-generation.md`，说明 `custom_prompt` 的 `sourceId` 可以来自 `PromptVariant.id` 或生成图评估记录。
+
+验证结果：
+
+- `npx prisma generate`：成功
+- `npx prisma migrate dev --name prompt_variants`：成功，数据库已同步
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功
+
+页面与接口测试：
+
+- `/api/prompt-variants/compose`：成功，基于 11 个模块组合出英文 PromptVariant。
+- `/api/prompt-variants/[id]/polish`：成功调用 `OPENAI_TEXT_MODEL`，新增 AI 润色版本。
+- `/api/prompt-variants`：成功按 `analysisId` 查询模板版本。
+- `/api/prompt-variants/[id]`：成功返回版本详情和基于该版本生成的测试图历史。
+- `/library/[id]`：HTTP 200，显示模板编辑器和模板版本区块，无 Next 错误覆盖层。
+- `/prompt-variants/[id]`：HTTP 200，显示组合 Prompt、负面 Prompt、编辑模块 JSON 和生成历史，无 Next 错误覆盖层。
+- `/library`：HTTP 200，分析卡片显示模板版本数量。
+- 从 PromptVariant 生成测试图：成功，`sourceType=custom_prompt`，`sourceId=PromptVariant.id`，新增生成图记录并保存文件。
