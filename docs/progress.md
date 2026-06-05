@@ -218,3 +218,34 @@
 - 数据库验证：`PromptSegment` 写入 11 条记录。
 - 重复拆解验证：再次点击同一 analysis 的“拆解 Prompt”后，旧 segments 被删除并重建，数据库仍保持 11 条记录，没有重复堆积。
 - 浏览器检查：`/analyze` 可访问，包含“开始 AI 分析”和“拆解 Prompt”按钮。
+
+## 2026-06-06 阶段 6：风格迁移融合 Prompt
+
+已完成：
+
+- 新增风格迁移提示词 `src/lib/ai/prompts/prompt-fusion-prompt.ts`。
+- 新增风格迁移结构化校验 `src/lib/ai/schemas/prompt-fusion.ts`。
+- 新增 `prompt-fusion-service`，基于已有 `PromptAnalysis` 和 `PromptSegment` 生成融合 prompt，不重新分析图片。
+- 新增 `POST /api/prompts/fuse`，生成并保存 `PromptFusion`。
+- 新增 `GET /api/analyses`，用于 `/fusion` 选择历史分析记录。
+- `/fusion` 页面从 mock 改为真实功能：可选择历史分析、查看原图预览和风格摘要、输入新需求、生成英文 finalPromptEnglish 和 negativePromptEnglish。
+- `/analyze` 页面分析成功后新增“去风格迁移”入口，跳转 `/fusion?analysisId=xxx`。
+- `/library` 页面读取真实分析记录，显示 Prompt 模块数量、风格迁移数量，并提供“用于风格迁移”入口。
+- 新增文档 `docs/prompt-fusion.md`。
+
+验证结果：
+
+- `npm run check:env`：脚本执行成功；通过 13 项，失败 2 项，跳过 0 项。失败项为本机代理端口 `7890`、`10809` 未监听。
+- `npm run lint`：通过。
+- `npm run build`：通过。
+- `POST /api/images/upload`：通过。
+- `POST /api/images/analyze`：通过。
+- `POST /api/prompts/segment`：通过。
+- `POST /api/prompts/fuse`：通过。
+- `GET /api/analyses`：通过。
+- 页面测试：`/fusion` 可选择历史分析记录并生成风格迁移 Prompt。
+- 数据库验证：`PromptFusion` 记录数从 0 增加到 1。
+- `finalPromptEnglish`：英文。
+- `negativePromptEnglish`：英文。
+- `/api/analyses` 能返回 `fusionsCount`，本次测试记录显示为 1。
+- 浏览器检查：`/fusion` 有“生成风格迁移 Prompt”入口，`/library` 显示风格迁移数量。

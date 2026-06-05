@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ImageUploader, type UploadedImage } from "@/components/upload/image-uploader";
@@ -354,6 +355,14 @@ export function AnalyzeWorkspace() {
         >
           {isSegmenting ? "正在拆解" : "拆解 Prompt"}
         </button>
+        {analysis ? (
+          <Link
+            href={`/fusion?analysisId=${analysis.id}`}
+            className="mt-3 block w-full rounded-md border border-emerald-300 bg-emerald-50 px-5 py-3 text-center text-sm font-medium text-emerald-700 transition hover:bg-emerald-100"
+          >
+            去风格迁移
+          </Link>
+        ) : null}
       </div>
 
       <div className="space-y-5">
