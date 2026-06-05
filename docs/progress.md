@@ -127,3 +127,34 @@
 
 - 进入阶段 3：接入视觉模型分析接口，基于上传图片生成中文结构化分析和英文 reverse prompt。
 - 增加上传记录列表或最近上传图片入口，方便从 `/analyze` 页面复用已上传图片。
+
+## 2026-06-06 阶段 3：OpenAI 兼容客户端和 AI 配置检测
+
+已完成：
+
+- 安装 OpenAI 官方 npm SDK。
+- 创建 AI 配置模块 `src/lib/ai/models.ts`。
+- 创建 OpenAI 客户端模块 `src/lib/ai/openai-client.ts`，加入 `server-only` 保护。
+- 创建 AI 错误解析模块 `src/lib/ai/errors.ts`，将常见错误转换为中文提示。
+- 创建 AI 状态检测接口 `GET /api/settings/ai-status`。
+- 状态接口返回 API Key 是否配置、掩码 API Key、Base URL、文本模型、视觉模型、图片模型、`/models` 连通性、可用模型数量、匹配到的目标模型和中文 warning。
+- 状态接口不会返回完整 API Key；未配置 `.env.local` 或 API Key 时也会正常返回“未配置”状态。
+- 更新 `/settings`，从 `/api/settings/ai-status` 获取真实配置状态，支持“重新检测”。
+- 更新 `/diagnostics`，保留阶段 0 mock 诊断展示，并新增 AI 配置检测区块。
+- 创建 AI 配置文档 `docs/ai-config.md`。
+
+验证结果：
+
+- `npm run check:env`：脚本执行成功；通过 13 项，失败 2 项，跳过 0 项。失败项为本机代理端口 `7890`、`10809` 未监听。
+- `npm run lint`：通过。
+- `npm run typecheck`：通过。
+- `npm run build`：通过。
+- `GET /api/settings/ai-status`：可用。
+- `/models` 连通性：HTTP 200，状态接口显示可连通。
+- 可用模型数量：2。
+- 模型匹配：已匹配到文本模型、视觉模型和图片模型。
+- 浏览器检查：`/settings` 和 `/diagnostics` 均显示 AI 配置检测、掩码 API Key、`/models 正常`，页面文本未出现完整 API Key。
+
+说明：
+
+- 本阶段只封装客户端和配置检测，不实现图片分析；图片分析留到阶段 4。

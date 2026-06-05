@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { AiStatusPanel } from "@/components/settings/ai-status-panel";
 
 const diagnostics = [
   ["Node.js", "正常", "v24.16.0"],
@@ -7,7 +8,7 @@ const diagnostics = [
   ["npm registry", "正常", "https://registry.npmjs.org/"],
   ["GitHub 远程仓库", "正常", "origin 已绑定并推送 main"],
   ["代理端口", "警告", "10808 可连接，7890 和 10809 未监听"],
-  ["OpenAI API", "未配置", ".env.local 尚未接入真实配置"],
+  ["OpenAI API", "未配置", "请查看下方 AI 配置检测区块"],
 ];
 
 const badgeClass: Record<string, string> = {
@@ -23,7 +24,7 @@ export default function DiagnosticsPage() {
         <p className="text-sm font-semibold text-cyan-700">环境健康度</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">环境诊断</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          当前展示阶段 0 的诊断项目 mock，后续可接入 `scripts/check-env.ts` 的真实输出。
+          保留阶段 0 的诊断项目展示，并新增 AI 配置检测区块。
         </p>
       </div>
 
@@ -40,6 +41,10 @@ export default function DiagnosticsPage() {
           </article>
         ))}
       </section>
+
+      <div className="mt-8">
+        <AiStatusPanel compact />
+      </div>
     </AppShell>
   );
 }
