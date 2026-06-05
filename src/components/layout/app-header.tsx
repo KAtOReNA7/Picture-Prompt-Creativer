@@ -6,6 +6,7 @@ const navItems = [
   { href: "/library", label: "Prompt 库" },
   { href: "/import", label: "导入 Prompt" },
   { href: "/fusion", label: "风格迁移" },
+  { href: "/generated-images", label: "生成图" },
   { href: "/settings", label: "系统设置" },
   { href: "/diagnostics", label: "环境诊断" },
 ];

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ErrorState } from "@/components/ui/error-state";
@@ -195,6 +196,18 @@ export function ImageGenerationPanel({
             </div>
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={`/generated-images/${image.id}`}
+              className="rounded-md bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-700"
+            >
+              查看生成图详情
+            </Link>
+            <Link
+              href={`/generated-images/${image.id}`}
+              className="rounded-md border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-cyan-700 transition hover:bg-cyan-50"
+            >
+              评估生成效果
+            </Link>
             <a
               href={image.fileUrl}
               target="_blank"

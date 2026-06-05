@@ -19,6 +19,17 @@ export async function GET(request: Request) {
     },
     orderBy: { createdAt: "desc" },
     take: limit,
+    include: {
+      evaluations: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      _count: {
+        select: {
+          evaluations: true,
+        },
+      },
+    },
   });
 
   return Response.json({
@@ -35,6 +46,18 @@ export async function GET(request: Request) {
       format: image.format,
       fileUrl: `/api/generated-images/${image.id}/file`,
       createdAt: image.createdAt.toISOString(),
+      evaluationCount: image._count.evaluations,
+      latestEvaluation: image.evaluations[0]
+        ? {
+            overallScore: image.evaluations[0].overallScore,
+            promptMatchScore: image.evaluations[0].promptMatchScore,
+            styleRetentionScore: image.evaluations[0].styleRetentionScore,
+            requirementMatchScore: image.evaluations[0].requirementMatchScore,
+            commercialPotentialScore: image.evaluations[0].commercialPotentialScore,
+            summary: image.evaluations[0].summary,
+            hasImprovedPrompt: Boolean(image.evaluations[0].improvedPrompt),
+          }
+        : null,
     })),
   });
 }

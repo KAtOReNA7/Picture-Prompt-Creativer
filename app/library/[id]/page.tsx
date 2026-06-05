@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ImageGenerationPanel } from "@/components/generation/image-generation-panel";
 import { AppShell } from "@/components/layout/app-shell";
@@ -80,6 +81,17 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
       ],
     },
     orderBy: { createdAt: "desc" },
+    include: {
+      evaluations: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      _count: {
+        select: {
+          evaluations: true,
+        },
+      },
+    },
   });
   const previewUrl = getPreviewUrl(analysis.image);
 
@@ -271,7 +283,30 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                   <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">{image.format ?? "png"}</span>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">{formatDate(image.createdAt)}</p>
+                <div className="mt-3 rounded-md bg-slate-50 p-3 text-sm">
+                  {image.evaluations[0] ? (
+                    <>
+                      <p className="font-semibold text-slate-900">最近评分：{image.evaluations[0].overallScore}/10</p>
+                      <p className="mt-1 line-clamp-2 text-slate-600">{image.evaluations[0].summary}</p>
+                    </>
+                  ) : (
+                    <p className="text-slate-500">暂无评估</p>
+                  )}
+                  <p className="mt-2 text-xs text-slate-500">评估次数：{image._count.evaluations}</p>
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    href={`/generated-images/${image.id}`}
+                    className="rounded-md bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-700"
+                  >
+                    查看详情
+                  </Link>
+                  <Link
+                    href={`/generated-images/${image.id}`}
+                    className="rounded-md border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-cyan-700 transition hover:bg-cyan-50"
+                  >
+                    评估效果
+                  </Link>
                   <a
                     href={generatedFileUrl(image.id)}
                     target="_blank"

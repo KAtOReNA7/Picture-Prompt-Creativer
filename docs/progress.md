@@ -316,3 +316,41 @@
 - `/library/[id]`：成功展示 reverse prompt / fusion prompt 生成入口和生成图历史。
 - `/fusion`：风格迁移成功后显示“生成测试图”按钮和 size / quality / format 选择。
 - `/library`：卡片成功显示生成图数量。
+
+## 阶段 9：生成图效果评估与 Prompt 迭代优化
+
+完成内容：
+
+- 新增 `GeneratedImageEvaluation` Prisma 模型，并给 `GeneratedImage` 增加 `evaluations` 关系。
+- 新增数据库迁移 `generated_image_evaluation`。
+- 新增 `src/lib/ai/prompts/generated-image-evaluation-prompt.ts`，用于生成图效果评估。
+- 新增 `src/lib/ai/schemas/generated-image-evaluation.ts`，校验评分、中文建议和英文 improved prompt。
+- 新增 `src/lib/generation/generated-image-evaluation-service.ts`，读取生成图文件、补充 PromptAnalysis / PromptFusion 上下文、调用视觉模型、解析 JSON 并保存评估记录。
+- 新增 `POST /api/generated-images/[id]/evaluate`。
+- 扩展 `GET /api/generated-images`，返回 `evaluationCount` 和最近一次评估摘要。
+- 新增 `/generated-images` 生成图列表页。
+- 新增 `/generated-images/[id]` 生成图详情与评估页，支持“评估生成效果”和“用改良 Prompt 再生成”。
+- 更新顶部导航，增加“生成图”入口。
+- 更新 `/library/[id]`，生成图历史显示最近评分、查看详情和评估入口。
+- 更新 `/fusion` 的生成面板，生成成功后可跳转生成图详情评估。
+- 新增 `docs/generated-image-evaluation.md`。
+
+验证结果：
+
+- `npx prisma generate`：成功
+- `npx prisma migrate dev --name generated_image_evaluation`：成功
+- `npm run check:env`：成功
+- `npm run lint`：成功
+- `npm run build`：成功
+
+页面与接口测试：
+
+- `/api/generated-images/[id]/evaluate`：成功调用 `OPENAI_VISION_MODEL` 评估生成图。
+- `GeneratedImageEvaluation`：成功新增记录。
+- `improvedPrompt`：英文。
+- `improvedNegativePrompt`：英文。
+- “用改良 Prompt 再生成”：成功调用 `/api/images/generate`，新图保存为 `custom_prompt` 来源。
+- `/generated-images`：可访问，显示生成图列表和最近评估评分。
+- `/generated-images/[id]`：可访问，显示生成参数、评估结果、改良 Prompt 和再生成入口。
+- `/library/[id]`：生成图历史显示最近评分、查看详情和评估入口。
+- `/fusion`：顶部导航包含“生成图”；生成测试图成功后由生成面板提供详情和评估跳转。

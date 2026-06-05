@@ -66,7 +66,7 @@ model PromptFusion {
 }
 
 model GeneratedImage {
-  id             String   @id @default(cuid())
+  id             String                     @id @default(cuid())
   prompt         String
   negativePrompt String?
   sourceType     String
@@ -78,5 +78,29 @@ model GeneratedImage {
   filename       String
   localPath      String
   publicPath     String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime                   @default(now())
+  evaluations    GeneratedImageEvaluation[]
+}
+
+model GeneratedImageEvaluation {
+  id                       String         @id @default(cuid())
+  generatedImageId         String
+  generatedImage           GeneratedImage @relation(fields: [generatedImageId], references: [id], onDelete: Cascade)
+  overallScore             Int
+  promptMatchScore         Int
+  styleRetentionScore      Int?
+  requirementMatchScore    Int?
+  compositionScore         Int
+  colorScore               Int
+  lightingScore            Int
+  subjectScore             Int
+  commercialPotentialScore Int
+  summary                  String
+  strengths                String
+  weaknesses               String
+  improvementAdvice        String
+  improvedPrompt           String
+  improvedNegativePrompt   String?
+  rawJson                  String?
+  createdAt                DateTime       @default(now())
 }
