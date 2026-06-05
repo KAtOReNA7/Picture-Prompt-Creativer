@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ImageGenerationPanel } from "@/components/generation/image-generation-panel";
 import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -18,6 +19,7 @@ type AnalysisListItem = {
   reversePromptExists: boolean;
   segmentsCount: number;
   fusionsCount: number;
+  generatedCount: number;
   createdAt: string;
   imagePreviewUrl: string | null;
 };
@@ -46,17 +48,19 @@ type FusionResult = {
   commercialPotentialScore: number;
 };
 
+type FusionRecord = {
+  id: string;
+  analysisId: string;
+  userRequirement: string;
+  fusedPrompt: string;
+  changeSummary: string | null;
+  createdAt: string;
+};
+
 type FusionResponse =
   | {
       ok: true;
-      fusion: {
-        id: string;
-        analysisId: string;
-        userRequirement: string;
-        fusedPrompt: string;
-        changeSummary: string | null;
-        createdAt: string;
-      };
+      fusion: FusionRecord;
       result: FusionResult;
     }
   | {
@@ -106,6 +110,7 @@ export function FusionWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [requirement, setRequirement] = useState("");
   const [result, setResult] = useState<FusionResult | null>(null);
+  const [fusion, setFusion] = useState<FusionRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFusing, setIsFusing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,13 +172,12 @@ export function FusionWorkspace() {
     setIsFusing(true);
     setFusionError(null);
     setResult(null);
+    setFusion(null);
 
     try {
       const response = await fetch("/api/prompts/fuse", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           analysisId: selectedAnalysis.id,
           userRequirement: requirement,
@@ -187,6 +191,7 @@ export function FusionWorkspace() {
       }
 
       setResult(data.result);
+      setFusion(data.fusion);
     } catch {
       setFusionError("风格迁移 Prompt 生成失败，请检查网络或稍后重试");
     } finally {
@@ -227,6 +232,7 @@ export function FusionWorkspace() {
               onClick={() => {
                 setSelectedId(analysis.id);
                 setResult(null);
+                setFusion(null);
                 setFusionError(null);
               }}
             >
@@ -240,6 +246,7 @@ export function FusionWorkspace() {
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
                 <span>模块：{analysis.segmentsCount}</span>
                 <span>融合：{analysis.fusionsCount}</span>
+                <span>生成图：{analysis.generatedCount}</span>
                 <span>{new Date(analysis.createdAt).toLocaleDateString("zh-CN")}</span>
               </div>
             </button>
@@ -278,14 +285,6 @@ export function FusionWorkspace() {
                     <dt className="text-sm font-semibold text-slate-900">色彩</dt>
                     <dd className="mt-1 text-sm text-slate-600">{selectedAnalysis.colorPalette ?? "无"}</dd>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-3">
-                    <dt className="text-sm font-semibold text-slate-900">光影</dt>
-                    <dd className="mt-1 text-sm text-slate-600">{selectedAnalysis.lighting ?? "无"}</dd>
-                  </div>
-                  <div className="rounded-md bg-slate-50 p-3">
-                    <dt className="text-sm font-semibold text-slate-900">Prompt 模块数量</dt>
-                    <dd className="mt-1 text-sm text-slate-600">{selectedAnalysis.segmentsCount}</dd>
-                  </div>
                 </dl>
               </div>
             </div>
@@ -319,7 +318,7 @@ export function FusionWorkspace() {
         {result ? (
           <section className="rounded-md border border-cyan-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-950">{result.title}</h2>
-            <p className="mt-2 text-sm text-slate-500">本阶段只生成 Prompt，不生成图片。</p>
+            <p className="mt-2 text-sm text-slate-500">本阶段可以基于生成的 Prompt 调用 image2 生成单张测试图。</p>
 
             <div className="mt-6 rounded-md border border-cyan-200 bg-cyan-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -327,6 +326,19 @@ export function FusionWorkspace() {
                 <CopyButton text={result.finalPromptEnglish} />
               </div>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{result.finalPromptEnglish}</p>
+              {fusion ? (
+                <div className="mt-4">
+                  <ImageGenerationPanel
+                    prompt={result.finalPromptEnglish}
+                    negativePrompt={result.negativePromptEnglish}
+                    sourceType="fusion_prompt"
+                    sourceId={fusion.id}
+                    title="生成测试图"
+                    buttonLabel="生成测试图"
+                    compact
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-6 rounded-md border border-rose-200 bg-rose-50 p-4">

@@ -282,3 +282,37 @@
 - `/api/prompts/fuse`：成功生成英文 finalPromptEnglish / negativePromptEnglish，并新增 PromptFusion。
 - `DELETE /api/analyses/[id]`：成功删除临时导入记录，删除后详情接口返回 404。
 - `/library`、`/library/[id]`、`/fusion?analysisId=...`、`/import`：浏览器渲染正常，无错误覆盖层。
+## 阶段 8：image2 / GPT Image 测试图生成
+
+完成内容：
+
+- 新增 `GeneratedImage` Prisma 模型，用于记录单张测试图生成结果。
+- 新增数据库迁移 `image_generation`。
+- 显式忽略 `uploads/generated/`，避免生成图片进入 Git。
+- 新增 `src/lib/generation/image-generation-service.ts`，封装服务端图片生成、英文 Prompt 校验、参数校验、`b64_json` / `url` 返回兼容、本地文件保存和数据库写入。
+- 新增 `POST /api/images/generate`，使用 `OPENAI_IMAGE_MODEL` 调用 `openai.images.generate`。
+- 新增 `GET /api/generated-images/[id]/file`，读取本地生成图片并返回正确 Content-Type。
+- 新增 `GET /api/generated-images`，支持按 `sourceType`、`sourceId`、`limit` 查询生成历史。
+- 更新 `/fusion`，风格迁移成功后可选择 size / quality / format 并生成测试图。
+- 更新 `/library/[id]`，支持用 reverse prompt 和每条 fusion prompt 生成测试图，并展示当前分析相关的生成图历史。
+- 更新 `/library`，卡片显示生成图数量。
+- 新增 `docs/image-generation.md`。
+
+验证结果：
+
+- `npx prisma generate`：成功
+- `npx prisma migrate dev --name image_generation`：成功
+- `npm run check:env`：成功
+- `npm run lint`：成功
+- `npm run build`：成功
+
+页面与接口测试：
+
+- `/api/images/generate`：成功调用 `OPENAI_IMAGE_MODEL=gpt-image-2` 生成测试图。
+- reverse prompt 生成测试图：成功，新增 `GeneratedImage`，文件保存到 `uploads/generated/`。
+- fusion prompt 生成测试图：成功，新增 `GeneratedImage`，文件保存到 `uploads/generated/`。
+- `/api/generated-images/[id]/file`：成功返回图片，Content-Type 为 `image/png`。
+- `/api/generated-images`：成功按 `sourceType` 和 `sourceId` 查询生成记录。
+- `/library/[id]`：成功展示 reverse prompt / fusion prompt 生成入口和生成图历史。
+- `/fusion`：风格迁移成功后显示“生成测试图”按钮和 size / quality / format 选择。
+- `/library`：卡片成功显示生成图数量。

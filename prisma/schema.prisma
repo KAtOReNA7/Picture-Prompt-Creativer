@@ -64,3 +64,19 @@ model PromptFusion {
   changeSummary   String?
   createdAt       DateTime       @default(now())
 }
+
+model GeneratedImage {
+  id             String   @id @default(cuid())
+  prompt         String
+  negativePrompt String?
+  sourceType     String
+  sourceId       String?
+  model          String
+  size           String
+  quality        String?
+  format         String?
+  filename       String
+  localPath      String
+  publicPath     String?
+  createdAt      DateTime @default(now())
+}

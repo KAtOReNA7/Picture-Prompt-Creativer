@@ -69,6 +69,30 @@ export async function GET(request: Request) {
     sort === "mostFusions"
       ? [...analyses].sort((a, b) => b._count.fusions - a._count.fusions || b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit)
       : analyses;
+  const generatedCounts = await Promise.all(
+    sortedAnalyses.map(async (analysis) => {
+      const fusionIds = await prisma.promptFusion.findMany({
+        where: { analysisId: analysis.id },
+        select: { id: true },
+      });
+      const count = await prisma.generatedImage.count({
+        where: {
+          OR: [
+            { sourceType: "analysis_reverse_prompt", sourceId: analysis.id },
+            {
+              sourceType: "fusion_prompt",
+              sourceId: {
+                in: fusionIds.map((fusion) => fusion.id),
+              },
+            },
+          ],
+        },
+      });
+
+      return [analysis.id, count] as const;
+    }),
+  );
+  const generatedCountByAnalysisId = new Map(generatedCounts);
 
   return Response.json({
     ok: true,
@@ -87,6 +111,7 @@ export async function GET(request: Request) {
       createdAt: analysis.createdAt.toISOString(),
       imageOriginalName: analysis.image?.originalName ?? null,
       imagePreviewUrl: analysis.image ? (analysis.image.publicPath ?? `/api/images/${analysis.image.id}/file`) : null,
+      generatedCount: generatedCountByAnalysisId.get(analysis.id) ?? 0,
     })),
   });
 }

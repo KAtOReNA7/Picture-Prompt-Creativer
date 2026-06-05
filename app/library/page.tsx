@@ -66,6 +66,11 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
           publicPath: true,
         },
       },
+      fusions: {
+        select: {
+          id: true,
+        },
+      },
       _count: {
         select: {
           segments: true,
@@ -76,7 +81,24 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
   });
 
   const sorted = sort === "mostFusions" ? [...analyses].sort((a, b) => b._count.fusions - a._count.fusions) : analyses;
-  return sorted.slice(0, 50);
+
+  return Promise.all(
+    sorted.slice(0, 50).map(async (analysis) => {
+      const generatedCount = await prisma.generatedImage.count({
+        where: {
+          OR: [
+            { sourceType: "analysis_reverse_prompt", sourceId: analysis.id },
+            { sourceType: "fusion_prompt", sourceId: { in: analysis.fusions.map((fusion) => fusion.id) } },
+          ],
+        },
+      });
+
+      return {
+        ...analysis,
+        generatedCount,
+      };
+    }),
+  );
 }
 
 export default async function LibraryPage({ searchParams }: LibraryPageProps) {
@@ -90,7 +112,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
           <p className="text-sm font-semibold text-cyan-700">素材沉淀</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">Prompt 库</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            保存图片分析、手动导入 Prompt、拆解模块和风格迁移记录，方便运营人员快速复用优质视觉方案。
+            保存图片分析、手动导入 Prompt、拆解模块、风格迁移记录和生成测试图，方便运营人员快速复用优质视觉方案。
           </p>
         </div>
         <Link
@@ -175,6 +197,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
                     Prompt 模块：{analysis._count.segments}
                   </span>
                   <span className="rounded-md bg-cyan-50 px-3 py-1 text-cyan-700">风格迁移：{analysis._count.fusions}</span>
+                  <span className="rounded-md bg-violet-50 px-3 py-1 text-violet-700">生成图：{analysis.generatedCount}</span>
                   <span className="rounded-md bg-slate-100 px-3 py-1 text-slate-600">{formatDate(analysis.createdAt)}</span>
                 </div>
 
