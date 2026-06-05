@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model PromptArchive {
+  id             String   @id @default(cuid())
+  title          String
+  category       String?
+  imagePath      String?
+  sourcePrompt   String?
+  analysisJson   String?
+  reversePrompt  String?
+  negativePrompt String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
