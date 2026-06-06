@@ -36,6 +36,7 @@ type LibraryBulkManagerProps = {
 };
 
 export function LibraryBulkManager({ analyses, collections }: LibraryBulkManagerProps) {
+  const [items, setItems] = useState(analyses);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [tagNames, setTagNames] = useState("");
   const [collectionId, setCollectionId] = useState(collections[0]?.id ?? "");
@@ -43,9 +44,10 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const selectedCount = selectedIds.length;
-  const allSelected = analyses.length > 0 && selectedIds.length === analyses.length;
+  const allSelected = items.length > 0 && selectedIds.length === items.length;
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   function toggle(id: string) {
@@ -53,7 +55,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
   }
 
   function toggleAll() {
-    setSelectedIds(allSelected ? [] : analyses.map((analysis) => analysis.id));
+    setSelectedIds(allSelected ? [] : items.map((analysis) => analysis.id));
   }
 
   async function bulkAddTags() {
@@ -141,19 +143,99 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
     }
   }
 
+  async function bulkDelete() {
+    if (selectedCount === 0) {
+      setError("请选择要删除的 Prompt 记录");
+      return;
+    }
+
+    setIsWorking(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/analyses/batch-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const data = (await response.json()) as {
+        ok: boolean;
+        error?: string;
+        deletedCount?: number;
+        deletedIds?: string[];
+        notFoundIds?: string[];
+        skippedGeneratedImagesCount?: number;
+        message?: string;
+      };
+
+      if (!response.ok || !data.ok) throw new Error(data.error ?? "批量删除失败");
+
+      const deletedSet = new Set(data.deletedIds ?? selectedIds);
+      setItems((current) => current.filter((item) => !deletedSet.has(item.id)));
+      setSelectedIds([]);
+      setIsDeleteConfirmOpen(false);
+      setMessage(
+        `${data.message ?? `已删除 ${data.deletedCount ?? 0} 条 Prompt 记录，原始图片和生成图已保留。`} 生成图保留 ${data.skippedGeneratedImagesCount ?? 0} 张。`,
+      );
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "批量删除失败");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   return (
     <div>
+      {isDeleteConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-lg rounded-md bg-white p-5 shadow-xl">
+            <h2 className="text-lg font-semibold text-slate-950">确认批量删除？</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              将删除选中的 {selectedCount} 条 Prompt 记录及其拆解、风格迁移、模板版本和标签绑定。原始图片、生成图和本地文件不会删除，可在运维页检查孤儿文件。
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                disabled={isWorking}
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                disabled={isWorking}
+                onClick={() => void bulkDelete()}
+                className="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
+              >
+                {isWorking ? "删除中" : "确认删除"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mb-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <input type="checkbox" checked={allSelected} onChange={toggleAll} />
             全选当前列表
           </label>
-          <span className="text-sm text-slate-500">已选择 {selectedCount} 条</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-slate-500">已选择 {selectedCount} 条</span>
+            <button
+              type="button"
+              disabled={isWorking || selectedCount === 0}
+              onClick={() => setIsDeleteConfirmOpen(true)}
+              className="rounded-md bg-rose-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              批量删除
+            </button>
+          </div>
         </div>
 
         {selectedCount > 0 ? (
-          <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_0.9fr_0.8fr_auto_auto_auto]">
+          <div className="mt-4 grid gap-3 xl:grid-cols-[1.1fr_0.9fr_0.8fr_auto_auto_auto]">
             <input
               className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
               placeholder="批量添加标签，用逗号分隔"
@@ -197,7 +279,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
       </div>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        {analyses.map((analysis) => (
+        {items.map((analysis) => (
           <article key={analysis.id} className={selectedSet.has(analysis.id) ? "rounded-md border border-cyan-300 bg-cyan-50 p-4 shadow-sm" : "rounded-md border border-slate-200 bg-white p-4 shadow-sm"}>
             <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-700">
               <input type="checkbox" checked={selectedSet.has(analysis.id)} onChange={() => toggle(analysis.id)} />

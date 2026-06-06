@@ -41,7 +41,9 @@ export function LibraryCardActions({ analysisId }: LibraryCardActionsProps) {
   }
 
   async function deleteAnalysis() {
-    const confirmed = window.confirm("确定删除这条 Prompt 分析记录吗？拆解模块和风格迁移历史会一并删除，参考图片文件会保留。");
+    const confirmed = window.confirm(
+      "确定删除这条 Prompt 记录吗？该操作只删除 Prompt 记录，不删除原始图片和生成图。拆解模块、风格迁移、模板版本和标签绑定会一并删除。",
+    );
     if (!confirmed) return;
 
     setIsDeleting(true);

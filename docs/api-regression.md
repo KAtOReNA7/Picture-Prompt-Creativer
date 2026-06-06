@@ -14,6 +14,7 @@
 | GET | `/api/analyses` | Prompt 库列表 | 无 | analyses 列表 | 查询参数异常 | 否 | 否 | 否 |
 | GET | `/api/analyses/[id]` | Prompt 详情 | id | analysis 详情 | 记录不存在 | 否 | 否 | 否 |
 | DELETE | `/api/analyses/[id]` | 删除 PromptAnalysis | id | 删除成功 | 记录不存在 | 否 | 否 | 是 |
+| POST | `/api/analyses/batch-delete` | 批量删除 PromptAnalysis | `ids` 非空数组，最多 100 条 | deletedCount、notFoundIds、skippedGeneratedImagesCount | ids 为空、超过 100、数据库失败 | 否 | 否 | 是 |
 | POST | `/api/analyses/[id]/tags` | 覆盖绑定标签 | `tagIds` | tags | tagId 不存在、analysis 不存在 | 否 | 否 | 是 |
 | POST | `/api/analyses/[id]/tags/quick-add` | 快速新建并绑定标签 | `tagNames` | tags | tagNames 空、analysis 不存在 | 否 | 否 | 是 |
 | POST | `/api/analyses/[id]/suggest-tags` | AI 推荐标签 | id | suggestedTags | AI 失败、格式异常 | 是 | 否 | 否 |
@@ -25,7 +26,7 @@
 | GET | `/api/prompt-variants` | 模板版本列表 | 可选 `analysisId` | variants | 无 | 否 | 否 | 否 |
 | GET | `/api/prompt-variants/[id]` | 模板版本详情 | id | variant + generatedImages | 版本不存在 | 否 | 否 | 否 |
 | POST | `/api/prompt-variants/[id]/polish` | AI 润色 PromptVariant | id | 新 PromptVariant | 版本不存在、AI 失败 | 是 | 否 | 是 |
-| POST | `/api/images/generate` | 生成测试图 | `prompt`,`sourceType`；可选 `originAnalysisId` | GeneratedImage，含 `originAnalysisId` | Prompt 非英文、模型不支持、保存失败 | 是 | 是 | 是 |
+| POST | `/api/images/generate` | 生成测试图 | `prompt`,`sourceType`；可选 `originAnalysisId` | GeneratedImage，含 `originAnalysisId` | Prompt 为空、模型不支持、保存失败 | 是 | 是 | 是 |
 | GET | `/api/generated-images` | 生成图列表 | 可选 `sourceType`,`sourceId`,`originAnalysisId` | images，含 `originAnalysisId` | 无 | 否 | 否 | 否 |
 | GET | `/api/generated-images/[id]/file` | 读取生成图 | id | 图片文件 | 文件不存在 | 否 | 是 | 否 |
 | POST | `/api/generated-images/[id]/evaluate` | 生成图评估 | id | GeneratedImageEvaluation | 图片不存在、AI 失败 | 是 | 是 | 是 |

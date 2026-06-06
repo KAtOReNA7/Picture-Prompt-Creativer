@@ -56,9 +56,56 @@
 删除策略：
 
 - 只删除 `PromptAnalysis`。
-- 通过 Prisma 级联删除关联的 `PromptSegment` 和 `PromptFusion`。
+- 通过 Prisma 级联删除关联的 `PromptSegment`、`PromptFusion`、`PromptVariant` 和 `PromptAnalysisTag`。
+- 删除前会清理合集中的 `analysis` 引用，以及该记录下 `PromptVariant` 对应的合集引用。
 - 不删除 `ImageAsset`。
-- 不删除本地图片文件。
+- 不删除原始上传图片文件。
+- 不删除 `GeneratedImage`。
+- 不删除生成图片文件。
+
+返回说明：
+
+```json
+{
+  "ok": true,
+  "message": "已删除 Prompt 记录，原始图片和生成图已保留。"
+}
+```
+
+## 批量删除 Prompt 记录
+
+接口地址：`POST /api/analyses/batch-delete`
+
+请求体：
+
+```json
+{
+  "ids": ["analysisId1", "analysisId2"]
+}
+```
+
+规则：
+
+- `ids` 必须是非空数组。
+- 系统会自动去重。
+- 单次最多删除 100 条记录，超过会返回“单次最多删除 100 条记录，请分批操作。”。
+- 不存在的 id 会返回到 `notFoundIds`，不会影响其他有效记录删除。
+- 删除范围与单条删除一致：只删除 Prompt 记录及其拆解、风格迁移、模板版本和标签绑定。
+- 原始图片、生成图、本地文件、备份、导出和日志都不会删除。
+- 删除前会清理合集中的 `analysis` 和 `prompt_variant` 弱引用，避免合集出现无效条目。
+- 如需检查孤儿文件，可进入 `/maintenance` 使用孤儿文件检查和安全清理工具。
+
+成功返回示例：
+
+```json
+{
+  "ok": true,
+  "deletedCount": 3,
+  "notFoundIds": [],
+  "skippedGeneratedImagesCount": 5,
+  "message": "已删除 3 条 Prompt 记录，原始图片和生成图已保留。"
+}
+```
 
 ## 导入已有 Prompt
 

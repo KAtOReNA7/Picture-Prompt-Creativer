@@ -676,3 +676,36 @@
 
 - 最终有效测试使用 ASCII `\uXXXX` Unicode 转义构造 JSON 请求体，避免 Windows 控制台管道把中文输入转成 mojibake。
 - 早期两次通过 PowerShell 管道传入 Node 的测试请求发生客户端侧编码损坏，生成图记录为 `cmq2avmk60000k13gt71nuvqy` 和 `cmq2axk310001k13g4ksko2lt`；它们不计入本次保真验收结论。
+
+## 阶段 14F：Prompt 库批量删除
+
+完成内容：
+
+- 新增 `src/lib/analysis/prompt-analysis-delete-service.ts`，统一处理单条和批量 PromptAnalysis 删除。
+- 新增 `POST /api/analyses/batch-delete`，支持最多 100 条 PromptAnalysis 批量删除，返回 `deletedCount`、`notFoundIds` 和保留的生成图数量。
+- 增强 `DELETE /api/analyses/[id]`，单条删除也会清理合集中的 `analysis` 和 `prompt_variant` 弱引用。
+- `/library` 批量操作栏新增“批量删除”按钮，无选择时禁用，选择后弹出中文二次确认。
+- 批量删除确认文案明确：只删除 Prompt 记录及其拆解、风格迁移、模板版本和标签绑定，不删除原始图片、生成图和本地文件。
+- 删除成功后从当前列表移除已删除记录，清空选中状态，并显示中文成功提示。
+- `/library/[id]` 和卡片单条删除文案改为“该操作只删除 Prompt 记录，不删除原始图片和生成图”。
+- `/collections/[id]` 对历史无效合集条目继续容错，缺失素材显示“该素材已删除”，不跳转到无效详情。
+- 更新 `docs/prompt-library.md`、`docs/api-regression.md` 和 `docs/acceptance-test.md`。
+
+验证结果：
+
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听。
+- `npm run lint`：成功。
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning。
+
+页面与接口测试：
+
+- `/library` 批量删除按钮：无选择时禁用，选择 2 条记录后显示“已选择 2 条”并启用。
+- 批量删除二次确认：弹窗标题为“确认批量删除？”，正文明确原始图片、生成图和本地文件不会删除。
+- 取消删除：点击“取消”后弹窗关闭，2 条测试记录仍保留，选择状态仍为 2 条。
+- 确认删除：点击“确认删除”后，当前列表中 2 条测试记录消失，选择状态清空，并显示“已删除 2 条 Prompt 记录，原始图片和生成图已保留。”。
+- `POST /api/analyses/batch-delete`：成功删除 2 条测试 PromptAnalysis，返回 `deletedCount=2`、`notFoundIds=[]`、`skippedGeneratedImagesCount=2`。
+- 数据库级联验证：被删 analysis 的 PromptSegment、PromptFusion、PromptVariant、PromptAnalysisTag 均删除。
+- 保留边界验证：相关 ImageAsset 仍存在，GeneratedImage 仍存在。
+- 合集引用验证：`analysis` 和 `prompt_variant` 类型 CollectionItem 已清理，`generated_image` 类型 CollectionItem 保留。
+- `DELETE /api/analyses/[id]` 单条删除：返回“已删除 Prompt 记录，原始图片和生成图已保留。”，并同样清理合集 analysis / prompt_variant 弱引用。
+- `/api/maintenance/orphans`：HTTP 200，`ok=true`，可继续检查孤儿文件和缺失文件。

@@ -155,3 +155,10 @@
 - 操作步骤：打开 `/import`，选择“AI 语义整理入库，保留原文”，分别测试中文 Prompt、英文 Prompt 和中英混合 Prompt。中文示例：“小红书封面图，一个穿红裙的女人站在雨夜街头，冷色电影感，强对比光影，悬疑小说氛围，标题区留在画面上方”。
 - 预期结果：导入成功；`importedRawPrompt` 与原始输入一致；导入记录的 `reversePrompt` 与原始输入一致；不再出现“reversePromptEnglish 必须是英文”；详情页显示“系统保留原始 Prompt 内容，仅做结构化分析整理”；Prompt 拆解能生成 11 个模块，中文 Prompt 的 segment content 可以是中文；PromptVariant 可以用中文模块组合成功。
 - 失败排查：检查 `prompt-import-normalization-prompt` 是否仍要求英文化，检查 `PromptSegment.content` 和 `PromptVariant` 组合服务是否仍有英文校验，确认 direct 模式仍不调用 AI。
+
+## 23. Prompt 库批量删除
+
+- 前置条件：`/library` 至少有 2 条可删除的测试 PromptAnalysis；其中至少 1 条包含 PromptSegment、PromptFusion、PromptVariant、标签绑定和合集引用；至少 1 条有关联 ImageAsset 或 GeneratedImage。
+- 操作步骤：打开 `/library`，勾选 2 条测试记录，点击“批量删除”，先在确认弹窗点击“取消”，确认记录仍存在；再次点击“批量删除”并点击“确认删除”。
+- 预期结果：确认前不会删除任何记录；确认后 `/library` 列表移除被删除记录并清空选择状态；数据库中 PromptAnalysis 被删除；关联 PromptSegment、PromptFusion、PromptVariant、PromptAnalysisTag 被删除；ImageAsset 和 GeneratedImage 仍保留；合集中的 `analysis` 和 `prompt_variant` 引用被清理；未选中的记录不受影响。
+- 失败排查：检查 `/api/analyses/batch-delete` 是否只使用前端传入的 selected ids；检查删除服务是否先查询 PromptVariant 再清理 CollectionItem；确认 Prisma cascade 是否仍配置在 PromptAnalysis 关系上。

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { deletePromptAnalyses } from "@/lib/analysis/prompt-analysis-delete-service";
 
 type RouteContext = {
   params: Promise<{
@@ -89,12 +90,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return Response.json({ ok: false, error: "未找到该 Prompt 分析记录" }, { status: 404 });
   }
 
-  await prisma.promptAnalysis.delete({
-    where: { id },
-  });
+  await deletePromptAnalyses([id]);
 
   return Response.json({
     ok: true,
-    message: "已删除该 Prompt 分析记录，参考图片文件已保留。",
+    message: "已删除 Prompt 记录，原始图片和生成图已保留。",
   });
 }

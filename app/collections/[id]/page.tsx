@@ -32,10 +32,10 @@ async function buildItem(item: {
       itemType: item.itemType,
       itemId: item.itemId,
       note: item.note,
-      title: analysis?.title ?? "已删除的 Prompt 分析",
-      description: analysis?.styleSummary ?? analysis?.visualSubject ?? "暂无摘要",
+      title: analysis?.title ?? "该素材已删除",
+      description: analysis?.styleSummary ?? analysis?.visualSubject ?? "该合集条目引用的 Prompt 记录已不存在。",
       imagePreviewUrl: imagePreviewUrl(analysis?.image ?? null),
-      href: `/library/${item.itemId}`,
+      href: analysis ? `/library/${item.itemId}` : "",
       badges: analysis?.tags.map((tag) => tag.tag.name) ?? [],
     };
   }
@@ -51,10 +51,10 @@ async function buildItem(item: {
       itemType: item.itemType,
       itemId: item.itemId,
       note: item.note,
-      title: variant?.title ?? "已删除的模板版本",
-      description: variant?.composedPrompt ?? "暂无 Prompt",
+      title: variant?.title ?? "该素材已删除",
+      description: variant?.composedPrompt ?? "该合集条目引用的模板版本已不存在。",
       imagePreviewUrl: null,
-      href: `/prompt-variants/${item.itemId}`,
+      href: variant ? `/prompt-variants/${item.itemId}` : "",
       badges: [variant?.source ?? "模板版本", variant?.analysis.title ?? "未命名分析"].filter(Boolean),
     };
   }
@@ -69,10 +69,10 @@ async function buildItem(item: {
     itemType: item.itemType,
     itemId: item.itemId,
     note: item.note,
-    title: image ? `生成图 ${image.id}` : "已删除的生成图",
-    description: image?.prompt ?? "暂无 Prompt",
+    title: image ? `生成图 ${image.id}` : "该素材已删除",
+    description: image?.prompt ?? "该合集条目引用的生成图已不存在。",
     imagePreviewUrl: image ? `/api/generated-images/${image.id}/file` : null,
-    href: `/generated-images/${item.itemId}`,
+    href: image ? `/generated-images/${item.itemId}` : "",
     badges: [image?.sourceType ?? "生成图", image?.evaluations[0] ? `评分 ${image.evaluations[0].overallScore}` : "未评估"].filter(Boolean),
   };
 }
