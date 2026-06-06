@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db/prisma";
 import { itemTypeLabel } from "@/lib/collections/collection-service";
+import { legacyGeneratedImageIdsForAnalysis } from "@/lib/generation/image-generation-service";
 
 export type ExportFormat = "json" | "markdown";
 export type ExportType = "analyses" | "collection";
@@ -44,12 +45,19 @@ async function getAnalysisExportData(ids: string[]) {
     throw new Error("没有找到可导出的 Prompt 记录");
   }
 
+  const generatedIdsByAnalysisId = new Map(
+    await Promise.all(
+      analyses.map(async (analysis) => {
+        const legacyIds = await legacyGeneratedImageIdsForAnalysis(analysis.id);
+        return [analysis.id, legacyIds] as const;
+      }),
+    ),
+  );
   const generatedImages = await prisma.generatedImage.findMany({
     where: {
       OR: [
-        { sourceType: "analysis_reverse_prompt", sourceId: { in: analyses.map((analysis) => analysis.id) } },
-        { sourceType: "fusion_prompt", sourceId: { in: analyses.flatMap((analysis) => analysis.fusions.map((fusion) => fusion.id)) } },
-        { sourceType: "custom_prompt", sourceId: { in: analyses.flatMap((analysis) => analysis.variants.map((variant) => variant.id)) } },
+        { originAnalysisId: { in: analyses.map((analysis) => analysis.id) } },
+        { id: { in: [...new Set([...generatedIdsByAnalysisId.values()].flat())] } },
       ],
     },
     include: {
@@ -112,6 +120,8 @@ async function getAnalysisExportData(ids: string[]) {
     })),
     generatedImages: generatedImages
       .filter((image) => {
+        if (image.originAnalysisId === analysis.id) return true;
+        if (generatedIdsByAnalysisId.get(analysis.id)?.includes(image.id)) return true;
         if (image.sourceType === "analysis_reverse_prompt") return image.sourceId === analysis.id;
         if (image.sourceType === "fusion_prompt") return analysis.fusions.some((fusion) => fusion.id === image.sourceId);
         if (image.sourceType === "custom_prompt") return analysis.variants.some((variant) => variant.id === image.sourceId);
@@ -121,6 +131,7 @@ async function getAnalysisExportData(ids: string[]) {
         id: image.id,
         sourceType: image.sourceType,
         sourceId: image.sourceId,
+        originAnalysisId: image.originAnalysisId,
         model: image.model,
         size: image.size,
         quality: image.quality,
@@ -204,6 +215,7 @@ async function getCollectionExportData(collectionId: string) {
             ? {
                 id: item.itemId,
                 sourceType: generatedImages.find((image) => image.id === item.itemId)?.sourceType,
+                originAnalysisId: generatedImages.find((image) => image.id === item.itemId)?.originAnalysisId,
                 fileUrl: `/api/generated-images/${item.itemId}/file`,
                 latestEvaluation: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]
                   ? {
@@ -253,7 +265,7 @@ function renderAnalysisMarkdown(analysis: Awaited<ReturnType<typeof getAnalysisE
     "",
     "### GeneratedImage",
     "",
-    ...analysis.generatedImages.map((image) => `- ${image.id}：${image.sourceType}，评分：${image.latestEvaluation?.overallScore ?? "未评估"}，摘要：${image.latestEvaluation?.summary ?? "无"}`),
+    ...analysis.generatedImages.map((image) => `- ${image.id}：${image.sourceType}，所属分析：${image.originAnalysisId ?? "未归属"}，评分：${image.latestEvaluation?.overallScore ?? "未评估"}，摘要：${image.latestEvaluation?.summary ?? "无"}`),
     "",
   ];
 
@@ -278,7 +290,7 @@ function renderMarkdown(type: ExportType, data: unknown): string {
     ...collectionData.items.map((item) => {
       if (item.analysis) return `### ${item.itemTypeLabel}：${item.analysis.title ?? item.itemId}\n\n${renderAnalysisMarkdown(item.analysis)}`;
       if (item.promptVariant) return `### ${item.itemTypeLabel}：${item.promptVariant.title ?? item.itemId}\n\n${item.promptVariant.composedPrompt ?? "无"}`;
-      if (item.generatedImage) return `### ${item.itemTypeLabel}：${item.generatedImage.id}\n\n- 图片：${item.generatedImage.fileUrl}\n- 最近评分：${item.generatedImage.latestEvaluation?.overallScore ?? "未评估"}\n- 评估摘要：${item.generatedImage.latestEvaluation?.summary ?? "无"}`;
+      if (item.generatedImage) return `### ${item.itemTypeLabel}：${item.generatedImage.id}\n\n- 图片：${item.generatedImage.fileUrl}\n- 所属分析：${item.generatedImage.originAnalysisId ?? "未归属"}\n- 最近评分：${item.generatedImage.latestEvaluation?.overallScore ?? "未评估"}\n- 评估摘要：${item.generatedImage.latestEvaluation?.summary ?? "无"}`;
       return `### ${item.itemTypeLabel}：${item.itemId}\n\n素材不存在或已删除。`;
     }),
     "",

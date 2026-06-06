@@ -70,6 +70,7 @@ type GeneratedImageRecord = {
   quality: string | null;
   format: string | null;
   fileUrl: string;
+  originAnalysisId: string | null;
   createdAt: string;
 };
 
@@ -85,6 +86,7 @@ type GenerateResponse =
 
 type GeneratedImageDetailWorkspaceProps = {
   imageId: string;
+  originAnalysisId?: string | null;
   initialEvaluation?: EvaluationResult | null;
   initialEvaluationId?: string | null;
 };
@@ -113,6 +115,7 @@ function TextList({ title, items }: { title: string; items: string[] }) {
 
 export function GeneratedImageDetailWorkspace({
   imageId,
+  originAnalysisId,
   initialEvaluation,
   initialEvaluationId,
 }: GeneratedImageDetailWorkspaceProps) {
@@ -171,6 +174,7 @@ export function GeneratedImageDetailWorkspace({
           negativePrompt: evaluation.improvedNegativePrompt,
           sourceType: "custom_prompt",
           sourceId: evaluationId,
+          originAnalysisId,
           size: "1024x1024",
           quality: "low",
           format: "png",

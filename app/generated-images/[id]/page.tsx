@@ -27,7 +27,7 @@ function fileUrl(id: string): string {
 }
 
 function sourceTypeLabel(sourceType: string): string {
-  if (sourceType === "analysis_reverse_prompt") return "Reverse Prompt";
+  if (sourceType === "analysis_reverse_prompt") return "原始 reverse prompt";
   if (sourceType === "fusion_prompt") return "风格迁移 Prompt";
   if (sourceType === "custom_prompt") return "自定义 Prompt";
   return sourceType;
@@ -60,6 +60,12 @@ export default async function GeneratedImageDetailPage({ params }: GeneratedImag
 
   const latestEvaluation = image.evaluations[0] ?? null;
   const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
+  const originAnalysis = image.originAnalysisId
+    ? await prisma.promptAnalysis.findUnique({
+        where: { id: image.originAnalysisId },
+        select: { id: true, title: true },
+      })
+    : null;
   const initialEvaluation = latestEvaluation
     ? {
         overallScore: latestEvaluation.overallScore,
@@ -125,6 +131,22 @@ export default async function GeneratedImageDetailPage({ params }: GeneratedImag
                 <dd className="mt-1 break-all text-slate-600">{image.sourceId ?? "无"}</dd>
               </div>
               <div className="rounded-md bg-slate-50 p-3">
+                <dt className="font-semibold text-slate-900">originAnalysisId</dt>
+                <dd className="mt-1 break-all text-slate-600">{image.originAnalysisId ?? "未归属"}</dd>
+              </div>
+              <div className="rounded-md bg-slate-50 p-3">
+                <dt className="font-semibold text-slate-900">所属原图 / Prompt 分析</dt>
+                <dd className="mt-1 text-slate-600">
+                  {originAnalysis ? (
+                    <Link href={`/library/${originAnalysis.id}`} className="text-cyan-700 hover:underline">
+                      {originAnalysis.title ?? originAnalysis.id}
+                    </Link>
+                  ) : (
+                    "未归属"
+                  )}
+                </dd>
+              </div>
+              <div className="rounded-md bg-slate-50 p-3">
                 <dt className="font-semibold text-slate-900">模型</dt>
                 <dd className="mt-1 break-all text-slate-600">{image.model}</dd>
               </div>
@@ -158,7 +180,12 @@ export default async function GeneratedImageDetailPage({ params }: GeneratedImag
       </section>
 
       <div className="mt-6">
-        <GeneratedImageDetailWorkspace imageId={image.id} initialEvaluation={initialEvaluation} initialEvaluationId={latestEvaluation?.id ?? null} />
+        <GeneratedImageDetailWorkspace
+          imageId={image.id}
+          originAnalysisId={image.originAnalysisId}
+          initialEvaluation={initialEvaluation}
+          initialEvaluationId={latestEvaluation?.id ?? null}
+        />
       </div>
     </AppShell>
   );

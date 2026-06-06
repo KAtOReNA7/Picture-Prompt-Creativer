@@ -23,6 +23,7 @@ export type GenerateImageInput = {
   negativePrompt?: string;
   sourceType: ImageSourceType;
   sourceId?: string;
+  originAnalysisId?: string;
   size?: ImageSize;
   quality?: ImageQuality;
   format?: ImageFormat;
@@ -39,6 +40,7 @@ export type GenerateImageOutput = {
     size: string;
     quality: string | null;
     format: string | null;
+    originAnalysisId: string | null;
     fileUrl: string;
     createdAt: string;
   };
@@ -103,6 +105,126 @@ function parseGenerationError(error: unknown): string {
   return parsed.message;
 }
 
+async function validateAnalysisId(analysisId: string | undefined): Promise<string | null> {
+  const id = analysisId?.trim();
+  if (!id) return null;
+
+  const analysis = await prisma.promptAnalysis.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  return analysis?.id ?? null;
+}
+
+export async function resolveGeneratedImageOriginAnalysisId(input: {
+  sourceType: string;
+  sourceId?: string | null;
+  explicitOriginAnalysisId?: string | null;
+}): Promise<string | null> {
+  const explicit = await validateAnalysisId(input.explicitOriginAnalysisId ?? undefined);
+  if (explicit) return explicit;
+
+  const sourceId = input.sourceId?.trim();
+  if (!sourceId) return null;
+
+  if (input.sourceType === "analysis_reverse_prompt") {
+    return validateAnalysisId(sourceId);
+  }
+
+  if (input.sourceType === "fusion_prompt") {
+    const fusion = await prisma.promptFusion.findUnique({
+      where: { id: sourceId },
+      select: { analysisId: true },
+    });
+
+    return fusion?.analysisId ?? null;
+  }
+
+  if (input.sourceType !== "custom_prompt") return null;
+
+  const variant = await prisma.promptVariant.findUnique({
+    where: { id: sourceId },
+    select: { analysisId: true },
+  });
+
+  if (variant?.analysisId) return variant.analysisId;
+
+  const evaluation = await prisma.generatedImageEvaluation.findUnique({
+    where: { id: sourceId },
+    select: {
+      generatedImage: {
+        select: {
+          originAnalysisId: true,
+          sourceType: true,
+          sourceId: true,
+        },
+      },
+    },
+  });
+
+  const sourceImage = evaluation?.generatedImage;
+  if (!sourceImage) return null;
+  if (sourceImage.originAnalysisId) return sourceImage.originAnalysisId;
+
+  return resolveGeneratedImageOriginAnalysisId({
+    sourceType: sourceImage.sourceType,
+    sourceId: sourceImage.sourceId,
+  });
+}
+
+export async function legacyGeneratedImageIdsForAnalysis(analysisId: string): Promise<string[]> {
+  const [fusions, variants] = await Promise.all([
+    prisma.promptFusion.findMany({ where: { analysisId }, select: { id: true } }),
+    prisma.promptVariant.findMany({ where: { analysisId }, select: { id: true } }),
+  ]);
+  const directImages = await prisma.generatedImage.findMany({
+    where: {
+      OR: [
+        { sourceType: "analysis_reverse_prompt", sourceId: analysisId },
+        { sourceType: "fusion_prompt", sourceId: { in: fusions.map((fusion) => fusion.id) } },
+        { sourceType: "custom_prompt", sourceId: { in: variants.map((variant) => variant.id) } },
+      ],
+    },
+    select: { id: true },
+  });
+  const directImageIds = directImages.map((image) => image.id);
+  const evaluations = directImageIds.length
+    ? await prisma.generatedImageEvaluation.findMany({
+        where: { generatedImageId: { in: directImageIds } },
+        select: { id: true },
+      })
+    : [];
+  const improvedImages = evaluations.length
+    ? await prisma.generatedImage.findMany({
+        where: {
+          sourceType: "custom_prompt",
+          sourceId: { in: evaluations.map((evaluation) => evaluation.id) },
+        },
+        select: { id: true },
+      })
+    : [];
+
+  return [...new Set([...directImageIds, ...improvedImages.map((image) => image.id)])];
+}
+
+export async function generatedImageWhereForAnalysis(analysisId: string) {
+  const legacyIds = await legacyGeneratedImageIdsForAnalysis(analysisId);
+
+  return {
+    OR: [
+      { originAnalysisId: analysisId },
+      ...(legacyIds.length > 0 ? [{ id: { in: legacyIds } }] : []),
+    ],
+  };
+}
+
+export async function countGeneratedImagesForAnalysis(analysisId: string): Promise<number> {
+  return prisma.generatedImage.count({
+    where: await generatedImageWhereForAnalysis(analysisId),
+  });
+}
+
 export async function generateImage(input: GenerateImageInput): Promise<GenerateImageOutput> {
   const prompt = input.prompt.trim();
 
@@ -127,6 +249,11 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
   const config = requireAiConfig();
   const client = getOpenAIClient();
   const finalPrompt = buildPrompt(prompt, input.negativePrompt);
+  const originAnalysisId = await resolveGeneratedImageOriginAnalysisId({
+    sourceType,
+    sourceId: input.sourceId,
+    explicitOriginAnalysisId: input.originAnalysisId,
+  });
 
   let imageData: { b64_json?: string | null; url?: string | null } | undefined;
 
@@ -185,6 +312,7 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
       filename,
       localPath,
       publicPath: null,
+      originAnalysisId,
     },
   });
 
@@ -199,6 +327,7 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
       size: record.size,
       quality: record.quality,
       format: record.format,
+      originAnalysisId: record.originAnalysisId,
       fileUrl: `/api/generated-images/${record.id}/file`,
       createdAt: record.createdAt.toISOString(),
     },

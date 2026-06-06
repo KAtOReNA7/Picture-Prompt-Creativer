@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { countGeneratedImagesForAnalysis } from "@/lib/generation/image-generation-service";
 
 function parseLimit(value: string | null): number {
   const parsed = Number.parseInt(value ?? "20", 10);
@@ -82,29 +83,7 @@ export async function GET(request: Request) {
     sort === "mostFusions"
       ? [...analyses].sort((a, b) => b._count.fusions - a._count.fusions || b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit)
       : analyses;
-  const generatedCounts = await Promise.all(
-    sortedAnalyses.map(async (analysis) => {
-      const fusionIds = await prisma.promptFusion.findMany({
-        where: { analysisId: analysis.id },
-        select: { id: true },
-      });
-      const count = await prisma.generatedImage.count({
-        where: {
-          OR: [
-            { sourceType: "analysis_reverse_prompt", sourceId: analysis.id },
-            {
-              sourceType: "fusion_prompt",
-              sourceId: {
-                in: fusionIds.map((fusion) => fusion.id),
-              },
-            },
-          ],
-        },
-      });
-
-      return [analysis.id, count] as const;
-    }),
-  );
+  const generatedCounts = await Promise.all(sortedAnalyses.map(async (analysis) => [analysis.id, await countGeneratedImagesForAnalysis(analysis.id)] as const));
   const generatedCountByAnalysisId = new Map(generatedCounts);
 
   return Response.json({

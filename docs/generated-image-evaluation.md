@@ -97,6 +97,9 @@
 - `negativePrompt = improvedNegativePrompt`
 - `sourceType = custom_prompt`
 - `sourceId = GeneratedImageEvaluation.id`
+- `originAnalysisId = 当前生成图的 originAnalysisId`
+
+这样再生成的新图可以继续归属回原始 `PromptAnalysis`，并显示在原图 `/library/[id]` 的生成图历史中。如果当前生成图没有 `originAnalysisId`，系统会尝试根据被评估生成图的 `sourceType/sourceId` 继续反推；无法推断时仍允许生成，只是新图会显示为“未归属”。
 
 ## 评估不是绝对审美判断
 

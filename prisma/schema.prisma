@@ -96,8 +96,11 @@ model GeneratedImage {
   filename       String
   localPath      String
   publicPath     String?
+  originAnalysisId String?
   createdAt      DateTime                   @default(now())
   evaluations    GeneratedImageEvaluation[]
+
+  @@index([originAnalysisId])
 }
 
 model GeneratedImageEvaluation {

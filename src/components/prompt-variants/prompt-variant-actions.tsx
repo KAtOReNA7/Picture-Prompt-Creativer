@@ -9,6 +9,7 @@ import { imageGenerationProgress, promptVariantPolishProgress } from "@/lib/ui/o
 
 type VariantLike = {
   id: string;
+  analysisId: string;
   composedPrompt: string;
   negativePrompt: string | null;
 };
@@ -94,6 +95,7 @@ export function PromptVariantActions({ variant }: { variant: VariantLike }) {
           negativePrompt: activeVariant.negativePrompt,
           sourceType: "custom_prompt",
           sourceId: activeVariant.id,
+          originAnalysisId: activeVariant.analysisId,
           size: "1024x1024",
           quality: "low",
           format: "png",

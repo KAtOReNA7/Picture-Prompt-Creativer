@@ -17,6 +17,7 @@ type GeneratedImage = {
   negativePrompt: string | null;
   sourceType: string;
   sourceId: string | null;
+  originAnalysisId: string | null;
   model: string;
   size: string;
   quality: string | null;
@@ -40,6 +41,7 @@ type ImageGenerationPanelProps = {
   negativePrompt?: string | null;
   sourceType: SourceType;
   sourceId?: string | null;
+  originAnalysisId?: string | null;
   title?: string;
   buttonLabel?: string;
   compact?: boolean;
@@ -60,6 +62,7 @@ export function ImageGenerationPanel({
   negativePrompt,
   sourceType,
   sourceId,
+  originAnalysisId,
   title = "生成测试图",
   buttonLabel = "生成测试图",
   compact = false,
@@ -87,6 +90,7 @@ export function ImageGenerationPanel({
           negativePrompt,
           sourceType,
           sourceId,
+          originAnalysisId,
           size,
           quality,
           format,
@@ -200,6 +204,10 @@ export function ImageGenerationPanel({
             <div>
               <dt className="font-semibold text-slate-900">格式</dt>
               <dd className="mt-1 text-slate-600">{image.format ?? "未记录"}</dd>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <dt className="font-semibold text-slate-900">所属分析</dt>
+              <dd className="mt-1 break-all text-slate-600">{image.originAnalysisId ?? "未归属"}</dd>
             </div>
             <div className="sm:col-span-2 lg:col-span-4">
               <dt className="font-semibold text-slate-900">创建时间</dt>

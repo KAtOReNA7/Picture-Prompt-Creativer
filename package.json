@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check:env": "node --experimental-strip-types scripts/check-env.ts",
+    "backfill:generated-origin": "node --experimental-strip-types scripts/backfill-generated-image-origin.ts",
     "check-env": "npm run check:env",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"

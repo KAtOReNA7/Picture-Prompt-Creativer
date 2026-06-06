@@ -580,3 +580,39 @@
 - `/library`：HTTP 200。
 - `/library/[id]`：HTTP 200，重新拆解、测试图生成、AI 推荐标签、PromptVariant AI 润色和测试图生成已接入进度弹窗。
 - `/prompt-variants/[id]`：HTTP 200，AI 润色和测试图生成已接入进度弹窗。
+
+## 阶段 14C：生成图 originAnalysisId 血缘归属
+
+完成内容：
+
+- `GeneratedImage` 新增 `originAnalysisId` 字段和索引，用于记录生成图最终归属的 `PromptAnalysis.id`。
+- 更新图片生成服务，在创建生成图前根据显式 `originAnalysisId` 或 `sourceType/sourceId` 推断归属。
+- 支持从 `analysis_reverse_prompt`、`fusion_prompt`、`PromptVariant`、`GeneratedImageEvaluation.improvedPrompt` 反推原始 PromptAnalysis。
+- `/api/images/generate` 支持可选 `originAnalysisId`，返回生成图时包含该字段。
+- `/api/generated-images` 支持 `originAnalysisId` 查询，并兼容历史 `sourceType/sourceId` 规则，避免重复返回。
+- 新增 `scripts/backfill-generated-image-origin.ts` 和 `npm run backfill:generated-origin`，用于回填历史生成图。
+- `/library/[id]` 生成图历史改为按 originAnalysisId 查询，展示 reversePrompt、fusionPrompt、PromptVariant 和 improvedPrompt 再生成图片。
+- `/generated-images/[id]` 显示 `originAnalysisId` 和“所属原图 / Prompt 分析”入口。
+- 生成图详情页“用改良 Prompt 再生成”会继承当前生成图的 `originAnalysisId`。
+- `/fusion` 生成测试图时显式传入当前 analysisId。
+- `/prompt-variants/[id]` 和库详情中的 PromptVariant 生成测试图时显式传入 variant.analysisId。
+- `/library` 和 `/api/analyses` 的 generatedCount 改为优先按 originAnalysisId 统计，并兼容旧规则。
+- 导出 JSON / Markdown 中的 generatedImages 增加 `originAnalysisId`，并能包含 improvedPrompt 再生成图。
+- 更新 `docs/image-generation.md`、`docs/generated-image-evaluation.md` 和 `docs/api-regression.md`。
+
+验证结果：
+
+- `npx prisma generate`：成功
+- `npx prisma migrate dev --name generated_image_origin_analysis`：成功，生成并应用 `20260606081639_generated_image_origin_analysis`
+- `npm run backfill:generated-origin`：成功；总记录数 9，已有 0，成功回填 9，无法推断 0
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning
+
+页面与接口测试：
+
+- `/api/generated-images?originAnalysisId=...`：HTTP 200，返回归属生成图，包含回填后的生成图。
+- `/generated-images/[id]`：HTTP 200，显示生成图详情。
+- `/library/[id]`：HTTP 200，生成图历史按 originAnalysisId 查询。
+- `/api/analyses`：generatedCount 已包含 originAnalysisId 归属生成图。
+- JSON 导出：成功，导出内容包含 `originAnalysisId` 和归属生成图。

@@ -9,6 +9,7 @@ import { PromptVariantActions } from "@/components/prompt-variants/prompt-varian
 import { AnalysisTagManager } from "@/components/tags/analysis-tag-manager";
 import { CopyButton } from "@/components/ui/copy-button";
 import { prisma } from "@/lib/db/prisma";
+import { generatedImageWhereForAnalysis } from "@/lib/generation/image-generation-service";
 
 type LibraryDetailPageProps = {
   params: Promise<{
@@ -41,9 +42,11 @@ function generatedFileUrl(id: string): string {
   return `/api/generated-images/${id}/file`;
 }
 
-function sourceTypeLabel(sourceType: string): string {
-  if (sourceType === "analysis_reverse_prompt") return "Reverse Prompt";
+function sourceTypeLabel(sourceType: string, sourceId: string | null, variantIds: Set<string>, evaluationIds: Set<string>): string {
+  if (sourceType === "analysis_reverse_prompt") return "原始 reverse prompt";
   if (sourceType === "fusion_prompt") return "风格迁移 Prompt";
+  if (sourceType === "custom_prompt" && sourceId && variantIds.has(sourceId)) return "模板版本 Prompt";
+  if (sourceType === "custom_prompt" && sourceId && evaluationIds.has(sourceId)) return "评估改良 Prompt";
   if (sourceType === "custom_prompt") return "自定义 Prompt";
   return sourceType;
 }
@@ -106,14 +109,8 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
 
   const allTags = await prisma.tag.findMany({ orderBy: { createdAt: "desc" } });
   const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
-  const fusionIds = analysis.fusions.map((fusion) => fusion.id);
   const generatedImages = await prisma.generatedImage.findMany({
-    where: {
-      OR: [
-        { sourceType: "analysis_reverse_prompt", sourceId: analysis.id },
-        { sourceType: "fusion_prompt", sourceId: { in: fusionIds } },
-      ],
-    },
+    where: await generatedImageWhereForAnalysis(analysis.id),
     orderBy: { createdAt: "desc" },
     include: {
       evaluations: {
@@ -127,6 +124,19 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
       },
     },
   });
+  const evaluationSourceIds = new Set(
+    generatedImages
+      .filter((image) => image.sourceType === "custom_prompt" && image.sourceId)
+      .map((image) => image.sourceId as string),
+  );
+  const sourceEvaluations = evaluationSourceIds.size
+    ? await prisma.generatedImageEvaluation.findMany({
+        where: { id: { in: [...evaluationSourceIds] } },
+        select: { id: true },
+      })
+    : [];
+  const variantIds = new Set(analysis.variants.map((variant) => variant.id));
+  const evaluationIds = new Set(sourceEvaluations.map((evaluation) => evaluation.id));
   const previewUrl = getPreviewUrl(analysis.image);
 
   return (
@@ -219,6 +229,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                   negativePrompt={analysis.negativePrompt}
                   sourceType="analysis_reverse_prompt"
                   sourceId={analysis.id}
+                  originAnalysisId={analysis.id}
                   title="用 reverse prompt 生成测试图"
                   buttonLabel="用 reverse prompt 生成测试图"
                 />
@@ -381,6 +392,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                       negativePrompt={analysis.negativePrompt}
                       sourceType="fusion_prompt"
                       sourceId={fusion.id}
+                      originAnalysisId={analysis.id}
                       title="用该迁移 prompt 生成测试图"
                       buttonLabel="用该迁移 prompt 生成测试图"
                       compact
@@ -406,7 +418,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={generatedFileUrl(image.id)} alt="生成测试图" className="h-56 w-full rounded-md object-cover" />
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
-                  <span className="rounded-md bg-cyan-50 px-2 py-1 text-cyan-700">{sourceTypeLabel(image.sourceType)}</span>
+                  <span className="rounded-md bg-cyan-50 px-2 py-1 text-cyan-700">{sourceTypeLabel(image.sourceType, image.sourceId, variantIds, evaluationIds)}</span>
                   <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">{image.size}</span>
                   <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">{image.quality ?? "未记录"}</span>
                   <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">{image.format ?? "png"}</span>

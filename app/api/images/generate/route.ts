@@ -5,6 +5,7 @@ type GenerateRequestBody = {
   negativePrompt?: unknown;
   sourceType?: unknown;
   sourceId?: unknown;
+  originAnalysisId?: unknown;
   size?: unknown;
   quality?: unknown;
   format?: unknown;
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
       negativePrompt: stringValue(body.negativePrompt),
       sourceType: sourceType as (typeof IMAGE_SOURCE_TYPES)[number],
       sourceId: stringValue(body.sourceId),
+      originAnalysisId: stringValue(body.originAnalysisId),
       size: size as (typeof IMAGE_SIZES)[number],
       quality: quality as (typeof IMAGE_QUALITIES)[number],
       format: format as (typeof IMAGE_FORMATS)[number],

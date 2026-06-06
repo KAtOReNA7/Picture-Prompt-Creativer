@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { generatedImageWhereForAnalysis } from "@/lib/generation/image-generation-service";
 
 function parseLimit(value: string | null): number {
   const parsed = Number.parseInt(value ?? "20", 10);
@@ -10,10 +11,13 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const sourceType = url.searchParams.get("sourceType")?.trim();
   const sourceId = url.searchParams.get("sourceId")?.trim();
+  const originAnalysisId = url.searchParams.get("originAnalysisId")?.trim();
   const limit = parseLimit(url.searchParams.get("limit"));
+  const originWhere = originAnalysisId ? await generatedImageWhereForAnalysis(originAnalysisId) : null;
 
   const images = await prisma.generatedImage.findMany({
     where: {
+      ...(originWhere ?? {}),
       ...(sourceType ? { sourceType } : {}),
       ...(sourceId ? { sourceId } : {}),
     },
@@ -40,6 +44,7 @@ export async function GET(request: Request) {
       negativePrompt: image.negativePrompt,
       sourceType: image.sourceType,
       sourceId: image.sourceId,
+      originAnalysisId: image.originAnalysisId,
       model: image.model,
       size: image.size,
       quality: image.quality,

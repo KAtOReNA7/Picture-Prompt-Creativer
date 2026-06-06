@@ -3,6 +3,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { LibraryBulkManager } from "@/components/library/library-bulk-manager";
 import { EmptyState } from "@/components/ui/empty-state";
 import { prisma } from "@/lib/db/prisma";
+import { countGeneratedImagesForAnalysis } from "@/lib/generation/image-generation-service";
 
 type LibraryPageProps = {
   searchParams: Promise<{
@@ -96,14 +97,7 @@ async function getAnalyses(params: Awaited<LibraryPageProps["searchParams"]>) {
 
   return Promise.all(
     sorted.slice(0, 50).map(async (analysis) => {
-      const generatedCount = await prisma.generatedImage.count({
-        where: {
-          OR: [
-            { sourceType: "analysis_reverse_prompt", sourceId: analysis.id },
-            { sourceType: "fusion_prompt", sourceId: { in: analysis.fusions.map((fusion) => fusion.id) } },
-          ],
-        },
-      });
+      const generatedCount = await countGeneratedImagesForAnalysis(analysis.id);
 
       return {
         ...analysis,

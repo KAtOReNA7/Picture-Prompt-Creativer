@@ -21,6 +21,7 @@
   "negativePrompt": "English negative prompt...",
   "sourceType": "fusion_prompt",
   "sourceId": "xxx",
+  "originAnalysisId": "optional prompt analysis id",
   "size": "1024x1024",
   "quality": "medium",
   "format": "png"
@@ -38,6 +39,7 @@
     "negativePrompt": "...",
     "sourceType": "fusion_prompt",
     "sourceId": "...",
+    "originAnalysisId": "...",
     "model": "...",
     "size": "1024x1024",
     "quality": "medium",
@@ -76,6 +78,7 @@
 
 - `sourceType`
 - `sourceId`
+- `originAnalysisId`
 - `limit`，默认 20，最大 50
 
 返回最近生成记录，包括：
@@ -85,6 +88,7 @@
 - negativePrompt
 - sourceType
 - sourceId
+- originAnalysisId
 - model
 - size
 - quality
@@ -107,6 +111,28 @@
 - `null`
 
 本阶段不建立外键，避免多态来源关系复杂化。
+
+## originAnalysisId 说明
+
+`originAnalysisId` 用来记录生成图最终归属于哪一条 `PromptAnalysis`。这解决了多轮迭代后图片血缘丢失的问题，例如：
+
+1. 原图生成 `PromptAnalysis`。
+2. 基于该分析生成风格迁移 Prompt。
+3. 用风格迁移 Prompt 生成测试图。
+4. 评估测试图并得到 improvedPrompt。
+5. 用 improvedPrompt 再生成新图。
+
+第 5 步的新图虽然 `sourceType=custom_prompt`，`sourceId=GeneratedImageEvaluation.id`，但仍应归属回第 1 步的原始 `PromptAnalysis`。系统会在生成服务中优先使用请求传入的 `originAnalysisId`，如果没有传入，则根据 `sourceType/sourceId` 反推。
+
+推断规则：
+
+- `analysis_reverse_prompt`：`sourceId` 即 `PromptAnalysis.id`。
+- `fusion_prompt`：根据 `PromptFusion.id` 找到 `analysisId`。
+- `custom_prompt` + `PromptVariant.id`：根据 `PromptVariant.analysisId` 归属。
+- `custom_prompt` + `GeneratedImageEvaluation.id`：继承被评估生成图的 `originAnalysisId`，或继续按旧来源反推。
+- 其他自定义来源无法推断时，`originAnalysisId=null`，不会中断生成。
+
+`GET /api/generated-images?originAnalysisId=xxx` 会优先返回该归属下的生成图，同时兼容历史数据的旧 `sourceType/sourceId` 规则，避免回填前的记录丢失展示。
 
 ## 参数说明
 

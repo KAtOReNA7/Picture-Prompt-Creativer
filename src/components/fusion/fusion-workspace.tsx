@@ -345,6 +345,7 @@ export function FusionWorkspace() {
                     negativePrompt={result.negativePromptEnglish}
                     sourceType="fusion_prompt"
                     sourceId={fusion.id}
+                    originAnalysisId={fusion.analysisId}
                     title="生成测试图"
                     buttonLabel="生成测试图"
                     compact
