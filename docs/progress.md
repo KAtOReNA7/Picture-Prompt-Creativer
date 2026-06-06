@@ -709,3 +709,35 @@
 - 合集引用验证：`analysis` 和 `prompt_variant` 类型 CollectionItem 已清理，`generated_image` 类型 CollectionItem 保留。
 - `DELETE /api/analyses/[id]` 单条删除：返回“已删除 Prompt 记录，原始图片和生成图已保留。”，并同样清理合集 analysis / prompt_variant 弱引用。
 - `/api/maintenance/orphans`：HTTP 200，`ok=true`，可继续检查孤儿文件和缺失文件。
+
+## 阶段 15：批量逆向 Prompt 任务系统
+
+完成内容：
+
+- Prisma 新增 `BatchAnalysisTask` 和 `BatchAnalysisItem`，用于记录批量任务和每张图片的上传/分析状态。
+- 上传接口 `/api/images/upload` 支持 `mode=batch_analysis`，批量模式默认单张最大 40MB，可通过 `BATCH_MAX_UPLOAD_MB` 配置。
+- 新增 `src/lib/batch/batch-analysis-service.ts`，集中封装任务创建、item 加入、计数重算、失败重试、任务状态更新和 `process-next`。
+- 新增批量任务 API：`POST /api/batch-analyses`、`GET /api/batch-analyses`、`GET/PATCH /api/batch-analyses/[id]`、`POST /api/batch-analyses/[id]/items`、`POST /api/batch-analyses/[id]/items/[itemId]/retry`、`POST /api/batch-analyses/[id]/process-next`。
+- 新增 `/batch-analyze` 和 `/batch-analyze/[id]`，支持创建任务、选择/拖拽多图、前端校验 100 张和 40MB、逐张上传、开始/暂停/继续处理、失败项重试和成功跳转 Prompt 库。
+- 顶部导航新增“批量逆向”。
+- 新增 `docs/batch-analysis.md`，并更新 README、API 回归清单和验收测试文档。
+
+验证结果：
+
+- `npx prisma generate`：成功。
+- `npx prisma migrate dev --name batch_image_analysis`：首次未设置 `DATABASE_URL` 失败；设置 `DATABASE_URL=file:./dev.db` 后成功，生成并应用 `20260606202044_batch_image_analysis`。
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听。
+- `npm run lint`：成功。
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning。
+
+页面与接口测试：
+
+- `/batch-analyze`：HTTP 200。
+- `/batch-analyze/[id]`：HTTP 200，任务详情刷新后可读取 items 和状态。
+- `POST /api/batch-analyses`：创建任务成功；`totalCount=101` 时返回 400 和中文错误。
+- `/api/images/upload` 批量模式：3 张 PNG 逐张上传成功并加入 BatchAnalysisItem；41MB 图片在 `mode=batch_analysis` 下返回“文件过大，当前最大允许 40MB”。
+- `POST /api/batch-analyses/[id]/items`：上传后加入任务成功，item 状态为 `pending`。
+- `POST /api/batch-analyses/[id]/process-next` 成功路径：使用已有真实图片 `19.png` 处理成功，生成 PromptAnalysis `cmq2sxk0t000ek1v82n7501jh`，任务状态为 `completed`，`/library/[analysisId]` HTTP 200。
+- `POST /api/batch-analyses/[id]/process-next` 失败路径：使用极小测试 PNG 时单项失败，错误记录到 item，不影响其他 pending 项继续处理。
+- 失败项重试：`POST /api/batch-analyses/[id]/items/[itemId]/retry` 成功将 failed item 改回 `pending`；再次处理失败时接口顶层仍为 `ok=true`，单项结果为 `itemOk=false`，不会中断队列。
+- `/analyze`：HTTP 200，单图分析页面可访问，现有单图流程未改动。

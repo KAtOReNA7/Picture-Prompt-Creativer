@@ -5,6 +5,7 @@
 ## 核心功能
 
 - 上传图片并调用视觉模型生成中文结构化分析。
+- 批量上传多张图片并逐张逆向分析，每个成功结果进入 Prompt 库。
 - 图片逆向分析会生成英文 reverse prompt 和 negative prompt。
 - 导入 Prompt 会保留原文，支持中文、英文和中英混合 Prompt。
 - 将 Prompt 拆解为可替换模块。
@@ -49,6 +50,10 @@ http://localhost:3000
 8. 在 Prompt 库中编辑模板版本。
 9. 添加标签，建立合集。
 10. 导出 JSON / Markdown，定期创建备份。
+
+### 批量逆向 Prompt
+
+打开 `/batch-analyze` 创建批量任务。一次最多选择 100 张图片，单张最大 40MB。系统会逐张上传图片并逐张调用视觉模型分析，不会把 100 张图片合并成一个巨大请求。失败的图片不会影响其他图片，可以在任务详情页单独重试。
 
 ## 常见工作流
 
@@ -111,6 +116,7 @@ OPENAI_TEXT_MODEL="你的文本模型"
 OPENAI_VISION_MODEL="你的视觉模型"
 OPENAI_IMAGE_MODEL="你的图片模型"
 MAX_UPLOAD_MB="15"
+BATCH_MAX_UPLOAD_MB="40"
 ```
 
 ## 常用命令

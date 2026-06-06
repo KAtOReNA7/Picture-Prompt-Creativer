@@ -3,6 +3,7 @@ import Link from "next/link";
 const navItems = [
   { href: "/", label: "首页" },
   { href: "/analyze", label: "图片逆向分析" },
+  { href: "/batch-analyze", label: "批量逆向" },
   { href: "/library", label: "Prompt 库" },
   { href: "/collections", label: "合集" },
   { href: "/import", label: "导入 Prompt" },

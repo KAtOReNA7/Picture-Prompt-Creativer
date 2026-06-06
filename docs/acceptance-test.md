@@ -162,3 +162,10 @@
 - 操作步骤：打开 `/library`，勾选 2 条测试记录，点击“批量删除”，先在确认弹窗点击“取消”，确认记录仍存在；再次点击“批量删除”并点击“确认删除”。
 - 预期结果：确认前不会删除任何记录；确认后 `/library` 列表移除被删除记录并清空选择状态；数据库中 PromptAnalysis 被删除；关联 PromptSegment、PromptFusion、PromptVariant、PromptAnalysisTag 被删除；ImageAsset 和 GeneratedImage 仍保留；合集中的 `analysis` 和 `prompt_variant` 引用被清理；未选中的记录不受影响。
 - 失败排查：检查 `/api/analyses/batch-delete` 是否只使用前端传入的 selected ids；检查删除服务是否先查询 PromptVariant 再清理 CollectionItem；确认 Prisma cascade 是否仍配置在 PromptAnalysis 关系上。
+
+## 24. 批量逆向 Prompt
+
+- 前置条件：OPENAI_VISION_MODEL 可用，准备 3 张 JPG/PNG/WebP 图片。
+- 操作步骤：打开 `/batch-analyze`，尝试选择 101 张图片，确认前端阻止；尝试选择一张超过 40MB 的图片，确认前端阻止；创建任务并上传 3 张正常图片；点击开始分析。
+- 预期结果：图片逐张上传，逐张加入 BatchAnalysisItem；前端循环调用 `/api/batch-analyses/[id]/process-next`；每张成功后生成独立 PromptAnalysis 并能跳转 `/library/[analysisId]`；失败项显示错误且不影响其他图片；失败项可重试；刷新 `/batch-analyze/[id]` 后可以继续 pending 项。
+- 失败排查：检查上传是否传 `mode=batch_analysis`，检查 `BATCH_MAX_UPLOAD_MB`，检查任务 item 状态和 `process-next` 是否每次只处理 1 张，确认 `/analyze` 单图分析仍可用。

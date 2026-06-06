@@ -8,6 +8,13 @@
 | POST | `/api/images/upload` | 上传图片 | form-data `file` | ImageAsset | 未上传、类型不支持、过大、保存失败 | 否 | 是 | 是 |
 | GET | `/api/images/[id]/file` | 读取上传图片 | image id | 图片文件 | 图片不存在、文件不存在 | 否 | 是 | 否 |
 | POST | `/api/images/analyze` | 图片逆向分析 | `imageId` | PromptAnalysis + 结构化结果 | 图片不存在、AI 失败、非 JSON | 是 | 是 | 是 |
+| POST | `/api/batch-analyses` | 创建批量逆向任务 | `name`,`totalCount`,`concurrency` | BatchAnalysisTask | totalCount 超限、concurrency 超限 | 否 | 否 | 是 |
+| GET | `/api/batch-analyses` | 批量逆向任务列表 | 无 | tasks | status 不支持 | 否 | 否 | 否 |
+| GET | `/api/batch-analyses/[id]` | 批量逆向任务详情 | id | task + items | 任务不存在 | 否 | 否 | 否 |
+| PATCH | `/api/batch-analyses/[id]` | 开始、暂停、取消任务 | `status` 可选 | task | 状态不支持、任务不存在 | 否 | 否 | 是 |
+| POST | `/api/batch-analyses/[id]/items` | 图片加入批量任务 | `imageId`,`originalName` | BatchAnalysisItem | 任务不存在、图片不存在、超过 100 张 | 否 | 否 | 是 |
+| POST | `/api/batch-analyses/[id]/items/[itemId]/retry` | 重试失败 item | id,itemId | item | item 不存在、不是 failed 状态 | 否 | 否 | 是 |
+| POST | `/api/batch-analyses/[id]/process-next` | 处理下一张 pending 图片 | `limit=1` | item + analysis | 任务暂停、图片不存在、AI 失败 | 是 | 是 | 是 |
 | POST | `/api/prompts/segment` | Prompt 拆解，保留原语言 | `analysisId` | 11 个 segments | analysis 不存在、reversePrompt 为空、AI 失败 | 是 | 否 | 是 |
 | POST | `/api/prompts/fuse` | 风格迁移 | `analysisId`,`userRequirement` | PromptFusion + finalPrompt | analysis 不存在、需求为空、AI 失败 | 是 | 否 | 是 |
 | POST | `/api/prompts/import` | Prompt 保真导入 | `rawPrompt`；可选 `importMode=semantic_preserve/direct` | PromptAnalysis + normalization | Prompt 为空、AI 失败、数据库失败 | 语义整理需要 | 可选图片 | 是 |

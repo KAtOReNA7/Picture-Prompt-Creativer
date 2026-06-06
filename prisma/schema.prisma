@@ -19,6 +19,7 @@ model ImageAsset {
   publicPath   String?
   createdAt    DateTime         @default(now())
   analyses     PromptAnalysis[]
+  batchItems   BatchAnalysisItem[]
 }
 
 model PromptAnalysis {
@@ -45,6 +46,52 @@ model PromptAnalysis {
   fusions        PromptFusion[]
   variants       PromptVariant[]
   tags           PromptAnalysisTag[]
+  batchItems     BatchAnalysisItem[]
+}
+
+model BatchAnalysisTask {
+  id                String              @id @default(cuid())
+  name              String
+  status            String
+  totalCount        Int
+  pendingCount      Int                 @default(0)
+  uploadingCount    Int                 @default(0)
+  processingCount   Int                 @default(0)
+  successCount      Int                 @default(0)
+  failedCount       Int                 @default(0)
+  canceledCount     Int                 @default(0)
+  maxItems          Int                 @default(100)
+  maxFileSizeMB     Int                 @default(40)
+  concurrency       Int                 @default(1)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  items             BatchAnalysisItem[]
+}
+
+model BatchAnalysisItem {
+  id           String            @id @default(cuid())
+  taskId       String
+  task         BatchAnalysisTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  imageId      String?
+  image        ImageAsset?       @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  analysisId   String?
+  analysis     PromptAnalysis?   @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  originalName String
+  mimeType     String?
+  size         Int?
+  status       String
+  errorMessage String?
+  sortOrder    Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  startedAt    DateTime?
+  finishedAt   DateTime?
+
+  @@index([taskId, status])
+  @@index([imageId])
+  @@index([analysisId])
 }
 
 model PromptSegment {

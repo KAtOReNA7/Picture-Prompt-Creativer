@@ -10,9 +10,11 @@ const allowedTypes = new Map([
   ["image/webp", "webp"],
 ]);
 
-function getMaxUploadBytes(): number {
-  const value = Number.parseInt(process.env.MAX_UPLOAD_MB || "15", 10);
-  const maxMb = Number.isFinite(value) && value > 0 ? value : 15;
+function getMaxUploadBytes(mode: string | null): number {
+  const envName = mode === "batch_analysis" ? "BATCH_MAX_UPLOAD_MB" : "MAX_UPLOAD_MB";
+  const fallback = mode === "batch_analysis" ? 40 : 15;
+  const value = Number.parseInt(process.env[envName] || String(fallback), 10);
+  const maxMb = Number.isFinite(value) && value > 0 ? value : fallback;
   return maxMb * 1024 * 1024;
 }
 
@@ -30,6 +32,7 @@ export async function POST(request: Request) {
   }
 
   const file = formData.get("file");
+  const mode = typeof formData.get("mode") === "string" ? String(formData.get("mode")) : null;
 
   if (!(file instanceof File)) {
     return jsonError("未上传文件");
@@ -41,7 +44,7 @@ export async function POST(request: Request) {
     return jsonError("文件类型不支持");
   }
 
-  const maxBytes = getMaxUploadBytes();
+  const maxBytes = getMaxUploadBytes(mode);
 
   if (file.size > maxBytes) {
     return jsonError(`文件过大，当前最大允许 ${Math.round(maxBytes / 1024 / 1024)}MB`);
