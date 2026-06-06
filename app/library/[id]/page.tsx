@@ -55,6 +55,20 @@ function sourceTypeLabelForVariant(source: string): string {
   return source;
 }
 
+function importModeLabel(importMode: string | null): string {
+  if (importMode === "semantic") return "AI 语义整理导入";
+  if (importMode === "direct") return "直接导入";
+  return "未记录";
+}
+
+function languageLabel(language: string | null): string {
+  if (language === "zh") return "中文";
+  if (language === "en") return "英文";
+  if (language === "mixed") return "中英混合";
+  if (language === "unknown") return "未知";
+  return "未记录";
+}
+
 function InfoBlock({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="rounded-md bg-slate-50 p-4">
@@ -167,6 +181,28 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
               <InfoBlock label="题材卖点" value={analysis.topicPotential} />
             </dl>
           </section>
+
+          {analysis.importedRawPrompt ? (
+            <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">导入来源</h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    导入模式：{importModeLabel(analysis.importMode)} · 检测语言：{languageLabel(analysis.importedPromptLanguage)}
+                  </p>
+                </div>
+                <CopyButton text={analysis.importedRawPrompt} label="复制 Prompt" />
+              </div>
+              <div className="mt-4 rounded-md bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">原始导入 Prompt</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{analysis.importedRawPrompt}</p>
+              </div>
+              <div className="mt-4 rounded-md bg-cyan-50 p-4">
+                <p className="text-sm font-semibold text-cyan-950">AI 整理后的 reversePrompt</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{analysis.reversePrompt ?? "暂无"}</p>
+              </div>
+            </section>
+          ) : null}
 
           <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">

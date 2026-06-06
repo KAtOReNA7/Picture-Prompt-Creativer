@@ -66,32 +66,48 @@
 
 接口地址：`POST /api/prompts/import`
 
+导入支持三类输入：
+
+- 中文 Prompt：例如“冷色电影感，一个孤独女人站在雨夜街头，适合悬疑小说小红书封面”。
+- 英文 Prompt：可以直接粘贴已有 image prompt。
+- 模糊描述：只写画面方向、题材卖点或风格关键词也可以。
+
+导入模式：
+
+- `semantic`：AI 语义整理导入，默认模式。系统会识别中文、英文或中英混合内容，生成中文结构化分析，并把 `reversePrompt` / `negativePrompt` 整理为英文，适合后续拆解、风格迁移和生成测试图。
+- `direct`：直接导入。不调用 AI，不拒绝中文 Prompt，适合先归档。该模式不会自动转英文，后续用于生成图前建议重新使用 AI 语义整理。
+
 请求体：
 
 ```json
 {
-  "title": "冷调电影感产品封面",
-  "reversePrompt": "A cinematic product cover image with dramatic cool lighting...",
-  "negativePrompt": "low quality, blurry, distorted, unreadable text",
-  "styleSummary": "冷调电影感，强对比光影",
-  "visualSubject": "产品主体",
-  "composition": "中心构图",
-  "colorPalette": "冷色调",
-  "lighting": "强侧光",
-  "texture": "细腻高质感",
-  "eraFeeling": "现代商业视觉",
-  "topicPotential": "适合封面与营销物料",
-  "imageId": "optional"
+  "title": "冷色电影感悬疑封面",
+  "rawPrompt": "冷色电影感，一个孤独女人站在雨夜街头，适合悬疑小说小红书封面",
+  "negativePrompt": "不要模糊、不要低清、不要错误文字",
+  "tags": ["封面", "悬疑", "电影感"],
+  "imageId": "optional",
+  "importMode": "semantic"
 }
 ```
 
+兼容旧字段：如果传入旧版 `reversePrompt`，接口会当作 `rawPrompt` 处理。
+
 规则：
 
-- `title` 必填。
-- `reversePrompt` 必填，且必须是英文。
-- `negativePrompt` 可选，但如果填写也应使用英文。
+- `rawPrompt` 必填。
+- `title` 可选；语义整理模式会自动生成中文标题，直接导入模式默认标题为“手动导入 Prompt”。
+- `negativePrompt` 可选；语义整理模式允许中文或英文，并会整理成英文 negative prompt。
+- `tags` 可选，导入后会自动创建并绑定标签。
 - `imageId` 可选；如果提供，系统会校验对应图片是否存在。
 - 导入成功后会创建 `PromptAnalysis`，并跳转到 `/library/[id]`。
+
+字段关系：
+
+- `importedRawPrompt`：保存用户原始粘贴的 Prompt 或模糊描述，不做英文化处理。
+- `importedPromptLanguage`：记录检测语言，可能是 `zh`、`en`、`mixed` 或 `unknown`。
+- `importMode`：记录导入模式，可能是 `semantic` 或 `direct`。
+- `reversePrompt`：语义整理模式下保存 AI 整理后的英文 image2 prompt；直接导入模式下保存原始 Prompt。
+- `negativePrompt`：语义整理模式下保存英文 negative prompt；直接导入模式下保存用户原文。
 
 导入后的 Prompt 可以继续执行：
 
@@ -100,9 +116,8 @@
 
 ## 常见错误
 
-- `请填写 Prompt 标题`：标题为空。
-- `请填写英文 Prompt`：reversePrompt 为空。
-- `英文 Prompt 看起来不符合要求`：reversePrompt 包含中文或英文词数量过少。
-- `Negative Prompt 应使用英文`：negativePrompt 包含中文。
+- `请填写原始 Prompt 或画面描述`：rawPrompt 为空。
 - `关联的参考图片不存在`：传入的 imageId 无效。
+- `AI 语义整理失败`：OPENAI_TEXT_MODEL 调用失败或模型返回为空。
+- `模型返回格式异常`：模型没有返回严格 JSON，或 reversePromptEnglish / negativePromptEnglish 不是英文。
 - `未找到该 Prompt 分析记录`：详情或删除接口中的 id 不存在。

@@ -516,3 +516,33 @@
 - `/settings`：HTTP 200，无错误覆盖层，显示 `appVersion: 0.5.0`。
 - `/diagnostics`：HTTP 200，无错误覆盖层。
 - JSON 导出字段：包含 analysis 基础信息、tags、reversePrompt、negativePrompt、segments、fusions、variants、generatedImages 和 evaluations 摘要。
+
+## 阶段 14A：中文 / 英文 / 模糊 Prompt 导入
+
+完成内容：
+
+- `PromptAnalysis` 新增 `importedRawPrompt`、`importedPromptLanguage`、`importMode` 字段，用于区分原始导入内容和整理后的 `reversePrompt`。
+- 新增 `src/lib/ai/prompts/prompt-import-normalization-prompt.ts`，用于中文、英文、中英混合和模糊 Prompt 的 AI 语义整理。
+- 新增 `src/lib/ai/schemas/prompt-import-normalization.ts`，校验检测语言、中文结构化字段、5-10 个中文标签、英文 reverse prompt 和英文 negative prompt。
+- 新增 `src/lib/analysis/prompt-import-service.ts`，统一处理语义整理导入和直接导入，支持参考图校验与标签 upsert / 绑定。
+- 重构 `/api/prompts/import`，支持 `rawPrompt`，兼容旧版 `reversePrompt`，成功返回 normalization 和 warnings。
+- 重构 `/import` 页面，移除手动结构化字段，支持标题、原始 Prompt、Negative Prompt、标签、参考图和导入模式。
+- `/library/[id]` 新增导入来源区块，展示原始导入 Prompt、检测语言、导入模式和 AI 整理后的 reversePrompt。
+- 更新 `docs/prompt-library.md` 和 `README.md`，补充中文 Prompt、模糊描述、语义整理导入、直接导入和字段关系说明。
+
+验证结果：
+
+- `npx prisma generate`：成功
+- `npx prisma migrate dev --name import_fuzzy_prompt`：成功，生成并应用 `20260606073422_import_fuzzy_prompt`
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning
+
+页面与接口测试：
+
+- `/import`：HTTP 200。
+- 中文模糊 Prompt 语义导入：成功创建 `PromptAnalysis`，`importedRawPrompt` 保留中文原文，`importedPromptLanguage=zh`，`reversePrompt` 和 `negativePrompt` 均为英文。
+- 对语义导入记录调用 `/api/prompts/segment`：成功生成 11 个模块，模块 `content` 无中文。
+- 英文 Prompt 语义导入：成功，`importedPromptLanguage=en`，`reversePrompt` 为英文。
+- 中文 Prompt 直接导入：成功，`importMode=direct`，不拒绝中文，返回“直接导入模式不会自动转英文”的 warning。
+- `/library/[id]`：HTTP 200，显示导入来源、原始导入 Prompt、检测语言和 AI 整理后的 reversePrompt。

@@ -36,6 +36,9 @@ model PromptAnalysis {
   topicPotential String?
   reversePrompt  String?
   negativePrompt String?
+  importedRawPrompt String?
+  importedPromptLanguage String?
+  importMode String?
   rawJson        String?
   createdAt      DateTime        @default(now())
   segments       PromptSegment[]

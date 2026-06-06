@@ -1,19 +1,13 @@
-import { prisma } from "@/lib/db/prisma";
+import { normalizePromptImport } from "@/lib/analysis/prompt-import-service";
 
 type ImportBody = {
   title?: unknown;
+  rawPrompt?: unknown;
   reversePrompt?: unknown;
   negativePrompt?: unknown;
-  styleSummary?: unknown;
-  visualSubject?: unknown;
-  composition?: unknown;
-  colorPalette?: unknown;
-  lighting?: unknown;
-  texture?: unknown;
-  eraFeeling?: unknown;
-  topicPotential?: unknown;
   imageId?: unknown;
   tags?: unknown;
+  importMode?: unknown;
 };
 
 function cleanText(value: unknown): string | undefined {
@@ -22,10 +16,12 @@ function cleanText(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function looksEnglishPrompt(value: string): boolean {
-  const chineseCharacters = /[\u3400-\u9fff]/;
-  const englishWords = value.match(/[A-Za-z][A-Za-z'-]*/g) ?? [];
-  return !chineseCharacters.test(value) && englishWords.length >= 5;
+function cleanTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
+    .filter(Boolean);
 }
 
 export async function POST(request: Request) {
@@ -37,70 +33,45 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "请求体必须是 JSON 格式" }, { status: 400 });
   }
 
-  const title = cleanText(body.title);
-  const reversePrompt = cleanText(body.reversePrompt);
-  const negativePrompt = cleanText(body.negativePrompt);
-  const imageId = cleanText(body.imageId);
+  const rawPrompt = cleanText(body.rawPrompt) ?? cleanText(body.reversePrompt);
+  const importMode = body.importMode === "direct" ? "direct" : "semantic";
 
-  if (!title) {
-    return Response.json({ ok: false, error: "请填写 Prompt 标题" }, { status: 400 });
-  }
-
-  if (!reversePrompt) {
-    return Response.json({ ok: false, error: "请填写英文 Prompt" }, { status: 400 });
-  }
-
-  if (!looksEnglishPrompt(reversePrompt)) {
-    return Response.json({ ok: false, error: "英文 Prompt 看起来不符合要求，请输入英文描述，不要直接粘贴中文 Prompt" }, { status: 400 });
-  }
-
-  if (negativePrompt && /[\u3400-\u9fff]/.test(negativePrompt)) {
-    return Response.json({ ok: false, error: "Negative Prompt 应使用英文" }, { status: 400 });
-  }
-
-  if (imageId) {
-    const image = await prisma.imageAsset.findUnique({
-      where: { id: imageId },
-      select: { id: true },
+  try {
+    const result = await normalizePromptImport({
+      title: cleanText(body.title),
+      rawPrompt: rawPrompt ?? "",
+      negativePrompt: cleanText(body.negativePrompt),
+      imageId: cleanText(body.imageId),
+      tags: cleanTags(body.tags),
+      importMode,
     });
 
-    if (!image) {
-      return Response.json({ ok: false, error: "关联的参考图片不存在" }, { status: 404 });
-    }
+    return Response.json({
+      ok: true,
+      analysis: {
+        id: result.analysis.id,
+        imageId: result.analysis.imageId,
+        title: result.analysis.title,
+        styleSummary: result.analysis.styleSummary,
+        visualSubject: result.analysis.visualSubject,
+        composition: result.analysis.composition,
+        colorPalette: result.analysis.colorPalette,
+        lighting: result.analysis.lighting,
+        texture: result.analysis.texture,
+        eraFeeling: result.analysis.eraFeeling,
+        topicPotential: result.analysis.topicPotential,
+        reversePrompt: result.analysis.reversePrompt,
+        negativePrompt: result.analysis.negativePrompt,
+        importedRawPrompt: result.analysis.importedRawPrompt,
+        importedPromptLanguage: result.analysis.importedPromptLanguage,
+        importMode: result.analysis.importMode,
+        createdAt: result.analysis.createdAt.toISOString(),
+      },
+      normalization: result.normalization,
+      warnings: result.warnings,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "导入失败";
+    return Response.json({ ok: false, error: message }, { status: 400 });
   }
-
-  const tags = Array.isArray(body.tags) ? body.tags.filter((tag): tag is string => typeof tag === "string") : [];
-
-  const analysis = await prisma.promptAnalysis.create({
-    data: {
-      imageId,
-      title,
-      reversePrompt,
-      negativePrompt,
-      styleSummary: cleanText(body.styleSummary),
-      visualSubject: cleanText(body.visualSubject),
-      composition: cleanText(body.composition),
-      colorPalette: cleanText(body.colorPalette),
-      lighting: cleanText(body.lighting),
-      texture: cleanText(body.texture),
-      eraFeeling: cleanText(body.eraFeeling),
-      topicPotential: cleanText(body.topicPotential),
-      rawJson: JSON.stringify({
-        source: "manual_import",
-        tags,
-      }),
-    },
-  });
-
-  return Response.json({
-    ok: true,
-    analysis: {
-      id: analysis.id,
-      imageId: analysis.imageId,
-      title: analysis.title,
-      reversePrompt: analysis.reversePrompt,
-      negativePrompt: analysis.negativePrompt,
-      createdAt: analysis.createdAt.toISOString(),
-    },
-  });
 }

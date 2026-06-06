@@ -5,44 +5,27 @@ import { FormEvent, useMemo, useState } from "react";
 import { ImageUploader, UploadedImage } from "@/components/upload/image-uploader";
 import { ErrorState } from "@/components/ui/error-state";
 
+type ImportMode = "semantic" | "direct";
+
 type ImportResponse =
   | {
       ok: true;
       analysis: {
         id: string;
       };
+      warnings: string[];
     }
   | {
       ok: false;
       error: string;
     };
 
-type FieldKey =
-  | "title"
-  | "reversePrompt"
-  | "negativePrompt"
-  | "styleSummary"
-  | "visualSubject"
-  | "composition"
-  | "colorPalette"
-  | "lighting"
-  | "texture"
-  | "eraFeeling"
-  | "topicPotential"
-  | "tags";
+type FieldKey = "title" | "rawPrompt" | "negativePrompt" | "tags";
 
 const initialForm: Record<FieldKey, string> = {
   title: "",
-  reversePrompt: "",
+  rawPrompt: "",
   negativePrompt: "",
-  styleSummary: "",
-  visualSubject: "",
-  composition: "",
-  colorPalette: "",
-  lighting: "",
-  texture: "",
-  eraFeeling: "",
-  topicPotential: "",
   tags: "",
 };
 
@@ -106,9 +89,39 @@ function TextArea({
   );
 }
 
+function ModeOption({
+  value,
+  current,
+  title,
+  description,
+  onChange,
+}: {
+  value: ImportMode;
+  current: ImportMode;
+  title: string;
+  description: string;
+  onChange: (value: ImportMode) => void;
+}) {
+  const isActive = value === current;
+
+  return (
+    <button
+      type="button"
+      className={`rounded-md border p-4 text-left transition ${
+        isActive ? "border-cyan-500 bg-cyan-50 ring-2 ring-cyan-100" : "border-slate-200 bg-white hover:border-cyan-200"
+      }`}
+      onClick={() => onChange(value)}
+    >
+      <span className="text-sm font-semibold text-slate-950">{title}</span>
+      <span className="mt-2 block text-sm leading-6 text-slate-600">{description}</span>
+    </button>
+  );
+}
+
 export function ImportPromptForm() {
   const router = useRouter();
   const [form, setForm] = useState(initialForm);
+  const [importMode, setImportMode] = useState<ImportMode>("semantic");
   const [image, setImage] = useState<UploadedImage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,13 +146,8 @@ export function ImportPromptForm() {
     event.preventDefault();
     setError(null);
 
-    if (!form.title.trim()) {
-      setError("请填写标题");
-      return;
-    }
-
-    if (!form.reversePrompt.trim()) {
-      setError("请填写英文 Prompt");
+    if (!form.rawPrompt.trim()) {
+      setError("请填写原始 Prompt 或画面描述");
       return;
     }
 
@@ -150,9 +158,12 @@ export function ImportPromptForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
+          title: form.title,
+          rawPrompt: form.rawPrompt,
+          negativePrompt: form.negativePrompt,
           tags,
           imageId: image?.id,
+          importMode,
         }),
       });
       const data = (await response.json()) as ImportResponse;
@@ -174,31 +185,30 @@ export function ImportPromptForm() {
     <form className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]" onSubmit={(event) => void submit(event)}>
       <section className="space-y-5 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">Prompt 基础信息</h2>
+          <h2 className="text-xl font-semibold text-slate-950">Prompt 导入信息</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            导入已有英文 Prompt 后，可以进入详情页重新拆解模块，也可以直接用于风格迁移。
+            可以粘贴中文、英文、中英混合 Prompt，也可以只写模糊画面需求。AI 语义整理会自动生成英文 reverse prompt，直接导入会保留原文。
           </p>
         </div>
 
         <TextInput
           label="标题"
-          required
           value={form.title}
-          placeholder="例如：冷调电影感产品封面 Prompt"
+          placeholder="例如“冷色电影感悬疑封面”"
           onChange={(value) => updateField("title", value)}
         />
         <TextArea
-          label="英文 Prompt"
+          label="原始 Prompt / 模糊描述"
           required
-          value={form.reversePrompt}
-          minHeight="min-h-44"
-          placeholder="Paste an English image prompt here..."
-          onChange={(value) => updateField("reversePrompt", value)}
+          value={form.rawPrompt}
+          minHeight="min-h-52"
+          placeholder="例如：冷色电影感，一个孤独女人站在雨夜街头，适合悬疑小说小红书封面"
+          onChange={(value) => updateField("rawPrompt", value)}
         />
         <TextArea
-          label="英文 Negative Prompt"
+          label="Negative Prompt"
           value={form.negativePrompt}
-          placeholder="low quality, blurry, distorted anatomy, bad composition, unreadable text..."
+          placeholder="可填写中文或英文。语义整理模式会转换为英文 Negative Prompt。"
           onChange={(value) => updateField("negativePrompt", value)}
         />
         <TextInput
@@ -215,26 +225,32 @@ export function ImportPromptForm() {
           disabled={isSubmitting}
           className="rounded-md bg-cyan-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {isSubmitting ? "正在导入" : "导入 Prompt"}
+          {isSubmitting ? "正在导入" : importMode === "semantic" ? "AI 语义整理导入" : "直接导入"}
         </button>
       </section>
 
       <aside className="space-y-6">
-        <section className="space-y-5 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="space-y-4 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
           <div>
-            <h2 className="text-xl font-semibold text-slate-950">中文结构化信息</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              这些字段会进入 Prompt 库详情页，并作为后续拆解与风格迁移的上下文。
-            </p>
+            <h2 className="text-xl font-semibold text-slate-950">导入模式</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">推荐使用 AI 语义整理，让中文或模糊描述可直接进入拆解、风格迁移和生成测试图流程。</p>
           </div>
-          <TextArea label="风格摘要" value={form.styleSummary} onChange={(value) => updateField("styleSummary", value)} />
-          <TextArea label="画面主体" value={form.visualSubject} onChange={(value) => updateField("visualSubject", value)} />
-          <TextArea label="构图" value={form.composition} onChange={(value) => updateField("composition", value)} />
-          <TextArea label="色彩" value={form.colorPalette} onChange={(value) => updateField("colorPalette", value)} />
-          <TextArea label="光影" value={form.lighting} onChange={(value) => updateField("lighting", value)} />
-          <TextArea label="材质" value={form.texture} onChange={(value) => updateField("texture", value)} />
-          <TextArea label="年代感" value={form.eraFeeling} onChange={(value) => updateField("eraFeeling", value)} />
-          <TextArea label="选题传播潜力" value={form.topicPotential} onChange={(value) => updateField("topicPotential", value)} />
+          <div className="grid gap-3">
+            <ModeOption
+              value="semantic"
+              current={importMode}
+              title="AI 语义整理导入"
+              description="自动识别语言，补齐结构化信息，并生成英文 reverse prompt 与 negative prompt。"
+              onChange={setImportMode}
+            />
+            <ModeOption
+              value="direct"
+              current={importMode}
+              title="直接导入"
+              description="不调用 AI，不拒绝中文 Prompt。适合先存档，后续再手动整理。"
+              onChange={setImportMode}
+            />
+          </div>
         </section>
 
         <section>
