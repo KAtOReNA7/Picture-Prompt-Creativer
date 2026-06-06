@@ -81,16 +81,6 @@ function assertSegmentType(value: unknown): PromptSegmentType {
   return type as PromptSegmentType;
 }
 
-function ensureEnglishContent(value: string, type: string): string {
-  const chineseCount = (value.match(/[\u4e00-\u9fa5]/g) ?? []).length;
-
-  if (chineseCount > 0) {
-    throw new Error(`模型返回格式异常：${type} 模块 content 必须保留英文 prompt 片段。`);
-  }
-
-  return value;
-}
-
 export function validatePromptSegmentationResult(value: unknown): PromptSegmentationResult {
   if (!isRecord(value)) {
     throw new Error("模型返回格式异常：根节点必须是 JSON 对象。");
@@ -112,7 +102,7 @@ export function validatePromptSegmentationResult(value: unknown): PromptSegmenta
     return {
       type,
       label: assertString(item.label, "label"),
-      content: ensureEnglishContent(assertString(item.content, "content"), type),
+      content: assertString(item.content, "content"),
       isReplaceable: assertBoolean(item.isReplaceable, "isReplaceable"),
       replaceHint: assertString(item.replaceHint, "replaceHint"),
       sortOrder: assertSortOrder(item.sortOrder),

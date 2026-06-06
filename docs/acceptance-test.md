@@ -149,9 +149,9 @@
 - 预期结果：操作开始后显示中文弹窗，包含操作名称、当前步骤、预估百分比和“此为预估进度”的说明；成功后进度到 100% 并显示已完成；失败后显示中文错误，页面按钮恢复可点击。
 - 失败排查：检查对应客户端组件是否渲染 `OperationProgressModal`，检查 hook 是否调用 `startProgress`、`completeProgress` 和 `failProgress`，确认错误信息没有英文堆栈或完整 API Key。
 
-## 22. 中文 Prompt 导入英文化修复
+## 22. Prompt 导入保真整理
 
 - 前置条件：OPENAI_TEXT_MODEL 可用。
-- 操作步骤：打开 `/import`，选择“AI 语义整理导入”，输入“小红书封面图，一个穿红裙的女人站在雨夜街头，冷色电影感，强对比光影，悬疑小说氛围，标题区留在画面上方”。也可以再输入一个容易让模型输出中文说明的模糊 Prompt。
-- 预期结果：导入不会因为首次 `reversePromptEnglish` 中英混合而直接失败；最终 `reversePrompt` 和 `negativePrompt` 为英文；如果触发二次修复，页面显示“导入成功，但系统对英文 Prompt 做了自动修复。”；进入 `/library/[id]` 后能看到原始中文 Prompt、整理后的英文 Prompt 和英文化修复说明。
-- 失败排查：检查 `prompt-english-repair-prompt` 是否返回严格 JSON，检查 `rawJson.repair`，确认 direct 模式没有被强制英文化。
+- 操作步骤：打开 `/import`，选择“AI 语义整理入库，保留原文”，分别测试中文 Prompt、英文 Prompt 和中英混合 Prompt。中文示例：“小红书封面图，一个穿红裙的女人站在雨夜街头，冷色电影感，强对比光影，悬疑小说氛围，标题区留在画面上方”。
+- 预期结果：导入成功；`importedRawPrompt` 与原始输入一致；导入记录的 `reversePrompt` 与原始输入一致；不再出现“reversePromptEnglish 必须是英文”；详情页显示“系统保留原始 Prompt 内容，仅做结构化分析整理”；Prompt 拆解能生成 11 个模块，中文 Prompt 的 segment content 可以是中文；PromptVariant 可以用中文模块组合成功。
+- 失败排查：检查 `prompt-import-normalization-prompt` 是否仍要求英文化，检查 `PromptSegment.content` 和 `PromptVariant` 组合服务是否仍有英文校验，确认 direct 模式仍不调用 AI。

@@ -25,12 +25,6 @@ type PolishPromptVariantInput = {
   variantId: string;
 };
 
-function looksMostlyEnglish(text: string): boolean {
-  const chineseChars = (text.match(/[\u3400-\u9fff]/g) ?? []).length;
-  const latinWords = (text.match(/[A-Za-z][A-Za-z'-]*/g) ?? []).length;
-  return latinWords >= 3 && chineseChars <= Math.max(2, text.length * 0.08);
-}
-
 function normalizeSegmentContent(content: string): string {
   return content.trim().replace(/\s+/g, " ");
 }
@@ -76,14 +70,6 @@ function parsePolishResult(value: unknown): {
     throw new Error("模型返回格式异常：润色结果字段不完整");
   }
 
-  if (!looksMostlyEnglish(polishedPromptEnglish)) {
-    throw new Error("模型返回格式异常：polishedPromptEnglish 必须是英文");
-  }
-
-  if (!looksMostlyEnglish(negativePromptEnglish)) {
-    throw new Error("模型返回格式异常：negativePromptEnglish 必须是英文");
-  }
-
   return { title, polishedPromptEnglish, negativePromptEnglish, changeSummary };
 }
 
@@ -120,21 +106,9 @@ export async function composePromptVariant(input: ComposePromptVariantInput) {
     throw new Error("至少需要启用 3 个 Prompt 模块");
   }
 
-  for (const segment of enabledSegments) {
-    if (!looksMostlyEnglish(segment.content)) {
-      throw new Error(`模块「${segment.label || segment.type}」内容需要使用英文`);
-    }
-  }
-
   const negativePrompt = cleanText(input.negativePrompt);
-  if (negativePrompt && !looksMostlyEnglish(negativePrompt)) {
-    throw new Error("Negative Prompt 需要使用英文");
-  }
 
   const composedPrompt = joinPromptSegments(enabledSegments);
-  if (!looksMostlyEnglish(composedPrompt)) {
-    throw new Error("组合后的 Prompt 需要是英文");
-  }
 
   return prisma.promptVariant.create({
     data: {
@@ -172,14 +146,14 @@ export async function polishPromptVariant(input: PolishPromptVariantInput) {
         {
           role: "system",
           content:
-            "你是专业 AI 图像 prompt 工程师。请在不改变核心主体、场景、风格和商业用途的前提下，润色英文 image2 prompt。输出严格 JSON，不要 Markdown。title 和 changeSummary 使用中文，polishedPromptEnglish 和 negativePromptEnglish 使用英文。",
+            "你是专业 AI 图像 prompt 工程师。请在不改变核心主体、场景、风格、语言倾向和商业用途的前提下，润色 image2 prompt。输出严格 JSON，不要 Markdown。title 和 changeSummary 使用中文，polishedPromptEnglish 和 negativePromptEnglish 字段名保持不变，但内容可以根据原 Prompt 使用中文、英文或中英混合。",
         },
         {
           role: "user",
           content: `
 原标题：${variant.title}
 备注：${variant.userNote ?? "无"}
-原英文 prompt：
+原 prompt：
 ${variant.composedPrompt}
 
 原 negative prompt：
@@ -188,8 +162,8 @@ ${variant.negativePrompt ?? "无"}
 请返回：
 {
   "title": "中文标题",
-  "polishedPromptEnglish": "英文润色后的完整 prompt",
-  "negativePromptEnglish": "英文 negative prompt",
+  "polishedPromptEnglish": "润色后的完整 prompt，可保留原语言",
+  "negativePromptEnglish": "negative prompt，可保留原语言",
   "changeSummary": "中文，说明润色做了什么"
 }
 `.trim(),

@@ -62,7 +62,7 @@ function sourceTypeLabelForVariant(source: string): string {
 }
 
 function importModeLabel(importMode: string | null): string {
-  if (importMode === "semantic") return "AI 语义整理导入";
+  if (importMode === "semantic" || importMode === "semantic_preserve") return "AI 语义整理入库，保留原文";
   if (importMode === "direct") return "直接导入";
   return "未记录";
 }
@@ -164,7 +164,7 @@ export default async function LibraryDetailPage({ params, searchParams }: Librar
   const evaluationIds = new Set(sourceEvaluations.map((evaluation) => evaluation.id));
   const previewUrl = getPreviewUrl(analysis.image);
   const importRepairInfo = parseImportRepairInfo(analysis.rawJson);
-  const showImportRepairWarning = resolvedSearchParams.importWarning === "prompt-repaired" || importRepairInfo.warnings.length > 0;
+  const showImportRepairWarning = resolvedSearchParams.importWarning === "prompt-repaired" || importRepairInfo.repairNotes;
 
   return (
     <AppShell>
@@ -233,6 +233,9 @@ export default async function LibraryDetailPage({ params, searchParams }: Librar
                   <p className="mt-2 text-sm text-slate-500">
                     导入模式：{importModeLabel(analysis.importMode)} · 检测语言：{languageLabel(analysis.importedPromptLanguage)}
                   </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    该记录来自 Prompt 导入，系统保留原始 Prompt 内容，仅做结构化分析整理。
+                  </p>
                 </div>
                 <CopyButton text={analysis.importedRawPrompt} label="复制 Prompt" />
               </div>
@@ -241,7 +244,7 @@ export default async function LibraryDetailPage({ params, searchParams }: Librar
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{analysis.importedRawPrompt}</p>
               </div>
               <div className="mt-4 rounded-md bg-cyan-50 p-4">
-                <p className="text-sm font-semibold text-cyan-950">AI 整理后的 reversePrompt</p>
+                <p className="text-sm font-semibold text-cyan-950">当前可执行 Prompt</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{analysis.reversePrompt ?? "暂无"}</p>
               </div>
               {importRepairInfo.repairNotes || importRepairInfo.warnings.length > 0 ? (

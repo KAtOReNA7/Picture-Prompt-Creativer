@@ -6,7 +6,7 @@
 
 支持能力：
 
-- 搜索：通过 `q` 搜索标题、风格摘要、画面主体和英文 Prompt。
+- 搜索：通过 `q` 搜索标题、风格摘要、画面主体和 Prompt。
 - 拆解状态筛选：`hasSegments=true` 表示已有 PromptSegment，`hasSegments=false` 表示未拆解。
 - 风格迁移筛选：`hasFusions=true` 表示已有 PromptFusion，`hasFusions=false` 表示未生成风格迁移。
 - 排序：`sort=latest` 最新优先，`sort=oldest` 最早优先，`sort=mostFusions` 风格迁移次数最多。
@@ -72,12 +72,12 @@
 - 英文 Prompt：可以直接粘贴已有 image prompt。
 - 模糊描述：只写画面方向、题材卖点或风格关键词也可以。
 
-导入模式：
+导入原则：
 
-- `semantic`：AI 语义整理导入，默认模式。系统会识别中文、英文或中英混合内容，生成中文结构化分析，并把 `reversePrompt` / `negativePrompt` 整理为英文，适合后续拆解、风格迁移和生成测试图。
-- `direct`：直接导入。不调用 AI，不拒绝中文 Prompt，适合先归档。该模式不会自动转英文，后续用于生成图前建议重新使用 AI 语义整理。
-
-中文 / 模糊 Prompt 导入时，系统会尽量自动英文化 `reversePrompt` 和 `negativePrompt`。如果模型首次返回了中英混合或包含中文字符的 `reversePromptEnglish`，系统会自动进行一次二次英文化修复，并在导入详情页显示修复说明。直接导入模式不会强制英文化，会原样保存用户输入。
+- 原始 Prompt 是核心资产，系统会原样保存，不翻译、不润色、不重排。
+- `semantic_preserve`：AI 语义整理入库，默认模式。系统只分析主体、场景、构图、色彩、光影、材质、风格、商业用途和标签，不改写 Prompt。
+- `direct`：直接入库。不调用 AI，不做结构化分析。
+- 兼容旧值：如果传入 `importMode=semantic`，系统会按 `semantic_preserve` 处理。
 
 请求体：
 
@@ -88,7 +88,7 @@
   "negativePrompt": "不要模糊、不要低清、不要错误文字",
   "tags": ["封面", "悬疑", "电影感"],
   "imageId": "optional",
-  "importMode": "semantic"
+  "importMode": "semantic_preserve"
 }
 ```
 
@@ -98,7 +98,7 @@
 
 - `rawPrompt` 必填。
 - `title` 可选；语义整理模式会自动生成中文标题，直接导入模式默认标题为“手动导入 Prompt”。
-- `negativePrompt` 可选；语义整理模式允许中文或英文，并会整理成英文 negative prompt。
+- `negativePrompt` 可选；系统会原样保存，不强制英文化。
 - `tags` 可选，导入后会自动创建并绑定标签。
 - `imageId` 可选；如果提供，系统会校验对应图片是否存在。
 - 导入成功后会创建 `PromptAnalysis`，并跳转到 `/library/[id]`。
@@ -107,10 +107,10 @@
 
 - `importedRawPrompt`：保存用户原始粘贴的 Prompt 或模糊描述，不做英文化处理。
 - `importedPromptLanguage`：记录检测语言，可能是 `zh`、`en`、`mixed` 或 `unknown`。
-- `importMode`：记录导入模式，可能是 `semantic` 或 `direct`。
-- `reversePrompt`：语义整理模式下保存 AI 整理后的英文 image2 prompt；直接导入模式下保存原始 Prompt。
-- `negativePrompt`：语义整理模式下保存英文 negative prompt；直接导入模式下保存用户原文。
-- `rawJson.repair` / `rawJson.repairNotes`：如果语义整理阶段触发二次英文化修复，会记录修复结果和中文说明。
+- `importMode`：记录导入模式，可能是 `semantic_preserve` 或 `direct`；旧数据中的 `semantic` 视为 `semantic_preserve`。
+- `reversePrompt`：导入记录中表示“当前可执行 Prompt”，保存用户原始 Prompt，不保证英文；图片逆向分析记录中的 `reversePrompt` 仍通常是英文。
+- `negativePrompt`：保存用户输入的 negative prompt 原文。
+- `rawJson.normalization`：语义整理分析结果，不包含对原始 Prompt 的改写。
 
 导入后的 Prompt 可以继续执行：
 
@@ -123,5 +123,4 @@
 - `关联的参考图片不存在`：传入的 imageId 无效。
 - `AI 语义整理失败`：OPENAI_TEXT_MODEL 调用失败或模型返回为空。
 - `模型返回格式异常`：模型没有返回严格 JSON，或字段不完整。
-- `AI 已尝试整理 Prompt，但英文 Prompt 仍未通过校验`：系统已经进行二次英文化修复，但结果仍包含中文或英文比例过低。请简化原始描述后重试。
 - `未找到该 Prompt 分析记录`：详情或删除接口中的 id 不存在。

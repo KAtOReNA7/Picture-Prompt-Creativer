@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   const rawPrompt = cleanText(body.rawPrompt) ?? cleanText(body.reversePrompt);
-  const importMode = body.importMode === "direct" ? "direct" : "semantic";
+  const importMode = body.importMode === "direct" ? "direct" : "semantic_preserve";
 
   try {
     const result = await normalizePromptImport({

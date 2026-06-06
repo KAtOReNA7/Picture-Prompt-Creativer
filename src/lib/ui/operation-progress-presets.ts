@@ -68,7 +68,7 @@ export const promptVariantPolishProgress: OperationProgressConfig = {
   steps: [
     { label: "读取模板版本", percent: 20 },
     { label: "调用文本模型", percent: 50 },
-    { label: "优化英文 Prompt", percent: 80 },
+    { label: "优化 Prompt 表达", percent: 80 },
     { label: "保存润色版本", percent: 95 },
   ],
 };

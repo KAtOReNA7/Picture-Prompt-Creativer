@@ -188,7 +188,6 @@ uploads/generated/
 ## 常见错误
 
 - `Prompt 不能为空`：请求没有传入 prompt。
-- `Prompt 必须是英文或主要为英文`：prompt 明显是中文。
 - `OPENAI_IMAGE_MODEL 未配置`：`.env.local` 缺少图片模型配置。
 - `当前模型不支持 images.generate`：模型不支持图片生成接口。
 - `内容审核拒绝生成`：Prompt 触发安全策略。

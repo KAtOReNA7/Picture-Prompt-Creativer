@@ -52,12 +52,6 @@ function assertOneOf<T extends readonly string[]>(value: string, allowed: T, lab
   }
 }
 
-function isMostlyEnglish(text: string): boolean {
-  const chineseChars = (text.match(/[\u3400-\u9fff]/g) ?? []).length;
-  const latinWords = (text.match(/[A-Za-z][A-Za-z'-]*/g) ?? []).length;
-  return latinWords >= 5 && chineseChars <= Math.max(4, text.length * 0.08);
-}
-
 function extensionForFormat(format: ImageFormat): string {
   return format === "jpeg" ? "jpg" : format;
 }
@@ -230,10 +224,6 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
 
   if (!prompt) {
     throw new Error("Prompt 不能为空");
-  }
-
-  if (!isMostlyEnglish(prompt)) {
-    throw new Error("Prompt 必须是英文或主要为英文，请先使用英文 Prompt 生成测试图");
   }
 
   const sourceType = input.sourceType;

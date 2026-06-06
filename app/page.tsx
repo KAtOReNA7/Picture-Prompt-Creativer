@@ -8,7 +8,7 @@ const features = [
   },
   {
     title: "Prompt 模块拆解",
-    description: "把英文 Prompt 拆成可复用模块，标注哪些内容建议保留，哪些内容适合替换。",
+    description: "把 Prompt 拆成可复用模块，保留原语言并标注哪些内容建议保留或替换。",
   },
   {
     title: "风格迁移融合",
@@ -20,7 +20,7 @@ const features = [
   },
   {
     title: "导入已有 Prompt",
-    description: "把外部英文 Prompt 直接保存到库中，可选择参考图，再继续拆解和风格迁移。",
+    description: "把外部 Prompt 原样保存到库中，可选择参考图，再继续拆解和风格迁移。",
   },
   {
     title: "模板编辑与版本",
@@ -33,7 +33,7 @@ const features = [
 ];
 
 const imageFlow = ["上传图片", "AI 分析", "逆向 Prompt", "拆解 Prompt", "输入新需求", "风格迁移生成新 Prompt"];
-const importFlow = ["导入已有 Prompt", "补充中文结构信息", "拆解 Prompt", "用于风格迁移"];
+const importFlow = ["导入已有 Prompt", "保留原文", "AI 分析整理", "拆解 Prompt", "用于风格迁移"];
 
 export default function Home() {
   return (

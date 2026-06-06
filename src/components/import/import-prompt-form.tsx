@@ -8,7 +8,7 @@ import { OperationProgressModal } from "@/components/ui/operation-progress-modal
 import { useOperationProgress } from "@/hooks/use-operation-progress";
 import { promptImportProgress } from "@/lib/ui/operation-progress-presets";
 
-type ImportMode = "semantic" | "direct";
+type ImportMode = "semantic_preserve" | "direct";
 
 type ImportResponse =
   | {
@@ -124,7 +124,7 @@ function ModeOption({
 export function ImportPromptForm() {
   const router = useRouter();
   const [form, setForm] = useState(initialForm);
-  const [importMode, setImportMode] = useState<ImportMode>("semantic");
+  const [importMode, setImportMode] = useState<ImportMode>("semantic_preserve");
   const [image, setImage] = useState<UploadedImage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -156,7 +156,7 @@ export function ImportPromptForm() {
     }
 
     setIsSubmitting(true);
-    if (importMode === "semantic") {
+    if (importMode === "semantic_preserve") {
       startProgress(promptImportProgress);
     }
 
@@ -178,21 +178,20 @@ export function ImportPromptForm() {
       if (!response.ok || !data.ok) {
         const message = data.ok ? "导入失败" : data.error;
         setError(message);
-        if (importMode === "semantic") {
+        if (importMode === "semantic_preserve") {
           failProgress(message);
         }
         return;
       }
 
-      if (importMode === "semantic") {
-        completeProgress(data.warnings.length > 0 ? "导入成功，但系统对英文 Prompt 做了自动修复。" : "Prompt 已整理并保存到库");
+      if (importMode === "semantic_preserve") {
+        completeProgress("Prompt 已保留原文并整理入库");
       }
-      const warningQuery = data.warnings.length > 0 ? "?importWarning=prompt-repaired" : "";
-      router.push(`/library/${data.analysis.id}${warningQuery}`);
+      router.push(`/library/${data.analysis.id}`);
     } catch {
       const message = "导入失败，请检查网络或稍后重试";
       setError(message);
-      if (importMode === "semantic") {
+      if (importMode === "semantic_preserve") {
         failProgress(message);
       }
     } finally {
@@ -207,7 +206,7 @@ export function ImportPromptForm() {
         <div>
           <h2 className="text-xl font-semibold text-slate-950">Prompt 导入信息</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            可以粘贴中文、英文、中英混合 Prompt，也可以只写模糊画面需求。AI 语义整理会自动生成英文 reverse prompt，直接导入会保留原文。
+            可以粘贴中文、英文、中英混合 Prompt，也可以只写模糊画面需求。导入会保留原文，不会自动改写、翻译或重排。
           </p>
         </div>
 
@@ -228,7 +227,7 @@ export function ImportPromptForm() {
         <TextArea
           label="Negative Prompt"
           value={form.negativePrompt}
-          placeholder="可填写中文或英文。语义整理模式会转换为英文 Negative Prompt。"
+          placeholder="可填写中文、英文或中英混合内容，系统会原样保存。"
           onChange={(value) => updateField("negativePrompt", value)}
         />
         <TextInput
@@ -245,7 +244,7 @@ export function ImportPromptForm() {
           disabled={isSubmitting}
           className="rounded-md bg-cyan-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {isSubmitting ? "正在导入" : importMode === "semantic" ? "AI 语义整理导入" : "直接导入"}
+          {isSubmitting ? "正在导入" : importMode === "semantic_preserve" ? "AI 语义整理入库" : "直接入库"}
         </button>
       </section>
 
@@ -253,21 +252,21 @@ export function ImportPromptForm() {
         <section className="space-y-4 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
           <div>
             <h2 className="text-xl font-semibold text-slate-950">导入模式</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">推荐使用 AI 语义整理，让中文或模糊描述可直接进入拆解、风格迁移和生成测试图流程。</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">推荐使用 AI 语义整理入库。AI 只分析风格、主体、构图、色彩、光影和标签，不会覆盖原始 Prompt。</p>
           </div>
           <div className="grid gap-3">
             <ModeOption
-              value="semantic"
+              value="semantic_preserve"
               current={importMode}
-              title="AI 语义整理导入"
-              description="自动识别语言，补齐结构化信息，并生成英文 reverse prompt 与 negative prompt。"
+              title="AI 语义整理入库，保留原文"
+              description="自动识别语言并整理结构化信息，原始 Prompt 会作为可执行 Prompt 原样保存。"
               onChange={setImportMode}
             />
             <ModeOption
               value="direct"
               current={importMode}
-              title="直接导入"
-              description="不调用 AI，不拒绝中文 Prompt。适合先存档，后续再手动整理。"
+              title="直接入库"
+              description="不调用 AI，不做结构化分析，适合先保存已验证 Prompt。"
               onChange={setImportMode}
             />
           </div>

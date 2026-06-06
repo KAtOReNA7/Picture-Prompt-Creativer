@@ -617,20 +617,21 @@
 - `/api/analyses`：generatedCount 已包含 originAnalysisId 归属生成图。
 - JSON 导出：成功，导出内容包含 `originAnalysisId` 和归属生成图。
 
-## 阶段 14D：导入 Prompt 英文化自动修复
+## 阶段 14D：导入 Prompt 保真分析整理
 
 完成内容：
 
-- 强化 `prompt-import-normalization-prompt`，明确 `reversePromptEnglish` 和 `negativePromptEnglish` 必须完全使用英文，中文只能出现在中文结构化字段。
-- 新增 `src/lib/ai/prompts/prompt-english-repair-prompt.ts`，用于把中文、中英混合或不规范 prompt 修复为英文 image2 prompt。
-- 新增 `src/lib/ai/schemas/prompt-english-repair.ts`，校验 `repairedPromptEnglish` 和 `repairedNegativePromptEnglish`。
-- 优化 `src/lib/ai/schemas/prompt-import-normalization.ts` 的英文检测，允许常见图像 prompt 的数字、标点、括号和 “Chinese typography” 等英文表达，但拒绝明显中文字符或英文比例过低的内容。
-- 改造 `prompt-import-service`：语义导入先校验结构，再单独检测英文；首次返回非英文时自动调用英文化修复，修复成功后再保存。
-- `rawJson` 保留首次 normalization、最终 normalization、repair、repairNotes 和 warnings。
-- `/api/prompts/import` 成功返回自动修复 warnings。
-- `/import` 语义导入修复成功时显示“导入成功，但系统对英文 Prompt 做了自动修复。”并跳转详情页。
-- `/library/[id]` 导入来源区域显示英文化修复说明和 repairNotes。
-- 更新 `docs/prompt-library.md` 和 `docs/acceptance-test.md`。
+- 重构 `prompt-import-normalization-prompt`，导入语义整理只做 Prompt 分析，不翻译、不改写、不重排原始 Prompt。
+- 重构 `prompt-import-normalization` schema，移除 `reversePromptEnglish` / `negativePromptEnglish` 字段要求，不再做英文校验。
+- 重构 `prompt-import-service`：`semantic` 和 `semantic_preserve` 均按保真语义整理处理，`reversePrompt=rawPrompt`，`importedRawPrompt=rawPrompt`，`negativePrompt` 原样保存。
+- `importMode` 新增语义值 `semantic_preserve`；旧 `semantic` 兼容为 `semantic_preserve`，`direct` 保持不调用 AI。
+- `/api/prompts/import` 支持 `importMode=semantic_preserve`，兼容旧字段 `reversePrompt`。
+- `/import` 页面文案改为“AI 语义整理入库，保留原文”和“直接入库”，删除自动英文化承诺。
+- `/library/[id]` 导入来源区块显示“系统保留原始 Prompt 内容，仅做结构化分析整理”，并将导入记录的 `reversePrompt` 标为“当前可执行 Prompt”。
+- Prompt 拆解提示词和 schema 放开语言限制，segment content 可以是中文、英文或中英混合。
+- PromptVariant 组合逻辑放开英文限制，中文模块和中英混合模块均可组合。
+- 图片生成服务移除英文 Prompt 硬校验，支持中文 Prompt 后续直接生成图片。
+- 更新 README、`docs/prompt-library.md`、`docs/acceptance-test.md`、`docs/api-regression.md` 和相关页面文案。
 
 验证结果：
 
@@ -640,8 +641,12 @@
 
 页面与接口测试：
 
-- `/api/prompts/import` 中文模糊 Prompt 语义导入：成功，最终 `reversePrompt` 和 `negativePrompt` 均为英文。本次模型首次返回已合规，未触发自动修复 warning。
-- `/api/prompts/segment`：对导入记录拆解成功，生成 11 个模块。
-- `/api/prompts/import` 英文 Prompt 语义导入：成功，未被错误修复。
-- `/api/prompts/import` direct 中文导入：成功，仍原样保存中文 Prompt，并返回 direct 模式 warning。
-- `/library/[id]`：HTTP 200，显示原始导入 Prompt 和 AI 整理后的 reversePrompt。
+- 中文 Prompt 语义整理导入：成功；analysisId `cmq29p7zm0000k14ga20zwwvn`，`importedRawPrompt`、`reversePrompt` 和 `negativePrompt` 均与输入原文一致。
+- 中文 Prompt 拆解：成功；生成 11 个模块，中文 content 模块数 11。
+- 中文模块组合 PromptVariant：成功；variantId `cmq29q9uq001fk14gpv44bcpx`，组合结果保留中文内容。
+- 英文 Prompt 语义整理导入：成功；analysisId `cmq29srp4001gk14gemcd2r1h`，原文保存一致，无中文保真 warning。
+- 中英混合 Prompt 语义整理导入：成功；analysisId `cmq29szn2002bk14gn529nppu`，原文保存一致，并返回保真 warning。
+- direct 中文导入：成功；analysisId `cmq29szoj0030k14gwdxwyudp`，不调用 AI 结构化分析，返回 direct 模式 warning。
+- `/import` 浏览器抽查：页面显示“保留原文”“中文、英文、中英混合”和“不改写”相关文案，未出现自动英文化承诺。
+- `/library/[id]` 浏览器抽查：导入来源区块显示原始导入 Prompt、检测语言、当前可执行 Prompt 和保真说明。
+- 原图片逆向分析记录抽查：analysisId `cmq1f8yv3000yk1vcp72mamko` 的 `importedRawPrompt` 为空，`reversePrompt` 不含中文，图片逆向分析的英文 reverse prompt 保存逻辑未被改动。
