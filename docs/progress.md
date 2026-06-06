@@ -650,3 +650,29 @@
 - `/import` 浏览器抽查：页面显示“保留原文”“中文、英文、中英混合”和“不改写”相关文案，未出现自动英文化承诺。
 - `/library/[id]` 浏览器抽查：导入来源区块显示原始导入 Prompt、检测语言、当前可执行 Prompt 和保真说明。
 - 原图片逆向分析记录抽查：analysisId `cmq1f8yv3000yk1vcp72mamko` 的 `importedRawPrompt` 为空，`reversePrompt` 不含中文，图片逆向分析的英文 reverse prompt 保存逻辑未被改动。
+
+## 阶段 14D 补充验收：中文 Prompt 图片生成实测
+
+测试目标：
+
+- 确认图片生成服务不再强制英文 Prompt。
+- 确认中文和中英混合 Prompt 可以成功调用 `OPENAI_IMAGE_MODEL`。
+- 确认 `GeneratedImage.prompt` 和 `GeneratedImage.negativePrompt` 保留输入原文。
+- 确认 `/generated-images/[id]` 和 originAnalysisId 归属查询正常。
+
+测试结果：
+
+- 中文 Prompt 生成：成功；generatedImageId `cmq2b1xql0003k13ghwmlrh7d`，模型 `gpt-image-2`，`promptEquals=true`，`negativeEquals=true`，`promptHasChinese=true`，`negativeHasChinese=true`。
+- 中文 Prompt 生成图文件：成功；`/api/generated-images/cmq2b1xql0003k13ghwmlrh7d/file` HTTP 200，Content-Type `image/png`。
+- 中文 Prompt 生成图详情页：成功；`/generated-images/cmq2b1xql0003k13ghwmlrh7d` HTTP 200，页面包含中文 Prompt。
+- 中文 Prompt origin 归属：成功；`/api/generated-images?originAnalysisId=cmq29p7zm0000k14ga20zwwvn` 能查询到该生成图。
+- 中英混合 Prompt 生成：成功；generatedImageId `cmq2b3kf20004k13gm6joaf7p`，模型 `gpt-image-2`，`promptEquals=true`，`negativeEquals=true`，`promptHasChinese=true`，`negativeHasChinese=true`。
+- 中英混合 Prompt 生成图文件：成功；`/api/generated-images/cmq2b3kf20004k13gm6joaf7p/file` HTTP 200，Content-Type `image/png`。
+- 中英混合 Prompt 生成图详情页：成功；`/generated-images/cmq2b3kf20004k13gm6joaf7p` HTTP 200，页面包含原始中英混合 Prompt。
+- 中英混合 Prompt origin 归属：成功；`/api/generated-images?originAnalysisId=cmq29p7zm0000k14ga20zwwvn` 能查询到该生成图。
+- 生成过程中未出现“Prompt 必须是英文”或类似英文强制校验错误。
+
+说明：
+
+- 最终有效测试使用 ASCII `\uXXXX` Unicode 转义构造 JSON 请求体，避免 Windows 控制台管道把中文输入转成 mojibake。
+- 早期两次通过 PowerShell 管道传入 Node 的测试请求发生客户端侧编码损坏，生成图记录为 `cmq2avmk60000k13gt71nuvqy` 和 `cmq2axk310001k13g4ksko2lt`；它们不计入本次保真验收结论。
