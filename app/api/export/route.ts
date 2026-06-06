@@ -1,4 +1,5 @@
 import { createExportFile } from "@/lib/export/export-service";
+import { appLog } from "@/lib/logging/app-logger";
 
 type ExportBody = {
   type?: unknown;
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
     const result = await createExportFile({ type, ids, collectionId, format });
     return Response.json({ ok: true, export: result });
   } catch (error) {
+    await appLog({ level: "error", scope: "export.create", message: "导出失败", safeDetail: error });
     return Response.json({ ok: false, error: error instanceof Error ? error.message : "导出失败" }, { status: 400 });
   }
 }

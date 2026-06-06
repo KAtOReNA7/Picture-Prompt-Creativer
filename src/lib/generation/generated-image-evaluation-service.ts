@@ -5,6 +5,7 @@ import { parseAiError } from "@/lib/ai/errors";
 import { parseModelJson } from "@/lib/ai/json";
 import { getOpenAIClient } from "@/lib/ai/openai-client";
 import { requireAiConfig } from "@/lib/ai/models";
+import { appLog } from "@/lib/logging/app-logger";
 import {
   buildGeneratedImageEvaluationUserPrompt,
   GENERATED_IMAGE_EVALUATION_SYSTEM_PROMPT,
@@ -196,6 +197,7 @@ export async function evaluateGeneratedImage(input: EvaluateGeneratedImageInput)
     }
   } catch (error) {
     const parsed = parseAiError(error);
+    await appLog({ level: "error", scope: "generated-image.evaluate", message: "生成图评估失败", safeDetail: error });
     throw new Error(parsed.message);
   }
 

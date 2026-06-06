@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { parseAiError } from "@/lib/ai/errors";
 import { requireAiConfig } from "@/lib/ai/models";
 import { getOpenAIClient } from "@/lib/ai/openai-client";
+import { appLog } from "@/lib/logging/app-logger";
 
 export const IMAGE_SOURCE_TYPES = ["analysis_reverse_prompt", "fusion_prompt", "custom_prompt"] as const;
 export const IMAGE_SIZES = ["1024x1024", "1024x1536", "1536x1024", "auto"] as const;
@@ -140,6 +141,7 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
     });
     imageData = response.data?.[0];
   } catch (error) {
+    await appLog({ level: "error", scope: "image.generate", message: "图片生成失败", safeDetail: error });
     throw new Error(parseGenerationError(error));
   }
 
@@ -165,7 +167,8 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
   try {
     await mkdir(uploadsDir, { recursive: true });
     await writeFile(localPath, buffer);
-  } catch {
+  } catch (error) {
+    await appLog({ level: "error", scope: "image.generate.save", message: "生成图保存失败", safeDetail: error });
     throw new Error("图片保存失败");
   }
 

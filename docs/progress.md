@@ -440,3 +440,41 @@
 - `/library/[id]`：HTTP 200，支持标签管理、AI 推荐标签和加入合集 UI。
 - `/prompt-variants/[id]`：HTTP 200，支持加入合集 UI。
 - `/generated-images/[id]`：HTTP 200，支持加入合集 UI。
+
+## 阶段 12：产品化加固、数据备份与本地运维工具
+
+完成内容：
+
+- 新增 `/maintenance` 本地运维页面，并在顶部导航增加“运维”入口。
+- 新增 `src/lib/maintenance/maintenance-service.ts`，集中处理数据库计数、目录大小、备份、孤儿文件检查、清理和备份下载路径校验。
+- 新增 `src/lib/logging/app-logger.ts`，写入 `logs/app.log`，自动掩码 API Key、忽略图片 base64、截断超长内容。
+- 新增 `/api/maintenance/status`，返回数据库、存储和 AI 配置状态。
+- 新增 `/api/maintenance/backup`，生成包含 `prisma/dev.db`、`uploads/`、`exports/`、`docs/*.md` 的 zip 备份。
+- 新增 `/api/maintenance/backups` 和 `/api/maintenance/backups/[filename]`。
+- 新增 `/api/maintenance/orphans`，检查孤儿上传文件、孤儿生成图文件、缺失本地文件记录、导出文件和备份文件。
+- 新增 `/api/maintenance/cleanup`，默认 dry-run，不显式传 true 不删除文件。
+- 新增 `/api/maintenance/logs`，返回最近 100 条日志。
+- 轻量接入关键错误日志：AI 图片分析失败、图片生成失败、生成图保存失败、生成图评估失败、上传保存失败、导出失败、备份失败。
+- 增强 `/diagnostics`，显示数据库记录数量、文件夹大小和最近 5 条错误日志。
+- 更新 `.gitignore`，忽略 `backups/` 和 `logs/`。
+- 新增 `README.md`。
+- 新增 `docs/backup-restore.md`。
+
+验证结果：
+
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning
+
+页面与接口测试：
+
+- `/maintenance`：HTTP 200，无错误覆盖层。
+- `/api/maintenance/status`：成功返回数据库计数、目录大小和 AI 配置状态。
+- `/api/maintenance/backup`：成功生成 zip 备份。
+- `/api/maintenance/backups`：成功返回备份列表。
+- `/api/maintenance/backups/[filename]`：成功下载备份 zip。
+- `/api/maintenance/orphans`：成功返回孤儿文件和缺失文件检查，当前孤儿文件 0、缺失文件 0。
+- `/api/maintenance/cleanup`：默认 dry-run 成功，未删除任何文件。
+- `/api/maintenance/logs`：成功返回日志列表。
+- `/diagnostics` 新增状态：HTTP 200，显示数据库记录数量、文件夹大小和最近错误日志。
+- `backups/`：成功生成 zip 文件，并已被 Git 忽略。

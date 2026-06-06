@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
+import { appLog } from "@/lib/logging/app-logger";
 
 const allowedTypes = new Map([
   ["image/jpeg", "jpg"],
@@ -54,7 +55,8 @@ export async function POST(request: Request) {
     await mkdir(uploadDir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(localPath, buffer);
-  } catch {
+  } catch (error) {
+    await appLog({ level: "error", scope: "images.upload.save", message: "上传图片保存失败", safeDetail: error });
     return jsonError("保存失败", 500);
   }
 
@@ -91,7 +93,8 @@ export async function POST(request: Request) {
         createdAt: updatedImage.createdAt.toISOString(),
       },
     });
-  } catch {
+  } catch (error) {
+    await appLog({ level: "error", scope: "images.upload.db", message: "上传图片数据库写入失败", safeDetail: error });
     return jsonError("数据库写入失败", 500);
   }
 }

@@ -7,6 +7,7 @@ import { parseAiError } from "@/lib/ai/errors";
 import { parseModelJson } from "@/lib/ai/json";
 import { IMAGE_ANALYSIS_SYSTEM_PROMPT, buildImageAnalysisUserPrompt } from "@/lib/ai/prompts/image-analysis-prompt";
 import { validateImageAnalysisResult, type ImageAnalysisResult } from "@/lib/ai/schemas/image-analysis";
+import { appLog } from "@/lib/logging/app-logger";
 
 type AnalyzeImageOutput = {
   analysis: {
@@ -93,6 +94,7 @@ export async function analyzeImageById(imageId: string): Promise<AnalyzeImageOut
     }
   } catch (error) {
     const parsed = parseAiError(error);
+    await appLog({ level: "error", scope: "image.analysis", message: "图片逆向分析 AI 调用失败", safeDetail: error });
     throw new Error(parsed.message);
   }
 
