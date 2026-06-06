@@ -169,3 +169,10 @@
 - 操作步骤：打开 `/batch-analyze`，尝试选择 101 张图片，确认前端阻止；尝试选择一张超过 40MB 的图片，确认前端阻止；创建任务并上传 3 张正常图片；点击开始分析。
 - 预期结果：图片逐张上传，逐张加入 BatchAnalysisItem；前端循环调用 `/api/batch-analyses/[id]/process-next`；每张成功后生成独立 PromptAnalysis 并能跳转 `/library/[analysisId]`；失败项显示错误且不影响其他图片；失败项可重试；刷新 `/batch-analyze/[id]` 后可以继续 pending 项。
 - 失败排查：检查上传是否传 `mode=batch_analysis`，检查 `BATCH_MAX_UPLOAD_MB`，检查任务 item 状态和 `process-next` 是否每次只处理 1 张，确认 `/analyze` 单图分析仍可用。
+
+## 25. 批量逆向失败原因提示
+
+- 前置条件：已有批量逆向任务，准备一张极小、空白或内容很少的 PNG。
+- 操作步骤：上传该图片并调用 `process-next`，观察 item 失败状态。
+- 预期结果：`item.errorMessage` 不再是“未知 AI 错误”；页面显示中文“失败原因”和“建议操作”；如果属于图片过小或不可识别，显示“建议更换更清晰或更大尺寸图片。重试可能仍会失败。”；失败不影响其他 item；重试按钮仍可用。
+- 失败排查：检查 `src/lib/ai/errors.ts`、`src/lib/analysis/image-analysis-service.ts` 和批量页面失败提示逻辑。

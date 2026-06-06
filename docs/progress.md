@@ -751,3 +751,27 @@
 - 推送结果：`git push origin v0.6.0-batch-analysis` 成功。
 - tag 确认：`git tag --list` 已显示 `v0.6.0-batch-analysis`。
 - 该检查点对应阶段 15：批量图片逆向 Prompt 分析工作流。
+
+## 阶段 15A：批量逆向失败原因提示优化
+
+完成内容：
+
+- 增强 `src/lib/ai/errors.ts`，对图片过小、内容过少、模型侧无法处理图片、请求体图片过大、视觉模型不支持图片输入、中转站超时和内容安全拒绝等情况返回更具体中文错误。
+- 增强 `src/lib/analysis/image-analysis-service.ts`，模型空返回、非 JSON、结构化字段缺失时返回更明确中文原因，并写入安全日志。
+- 批量任务 item 继续保存具体 `errorMessage`，不改变队列主流程，不影响其他 item 继续处理。
+- `/batch-analyze` 和 `/batch-analyze/[id]` 的失败 item 显示“失败原因”和“建议操作”；图片过小或不可识别时提示“建议更换更清晰或更大尺寸图片。重试可能仍会失败。”。
+- 更新 `docs/batch-analysis.md` 和 `docs/acceptance-test.md`。
+
+验证结果：
+
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听。
+- `npm run lint`：成功。
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning。
+
+页面与接口测试：
+
+- 使用 1x1 极小 PNG 创建批量任务并调用 `process-next`：item 失败，接口顶层 `ok=true`，`itemOk=false`，不影响任务流程。
+- 失败 item 的 `errorMessage` 已变为“模型未能识别这张图片，可能是图片过小、内容过少、空白或模型侧无法处理。建议更换更清晰或更大尺寸图片。”，不再是“未知 AI 错误，请检查服务配置后重试。”。
+- `/batch-analyze/[id]`：HTTP 200，页面包含“失败原因”/“建议操作”展示。
+- 失败项重试：成功将 item 改回 `pending`。
+- `/analyze`：HTTP 200，单图分析页面可访问，现有单图流程未改动。

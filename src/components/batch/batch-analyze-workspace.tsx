@@ -83,6 +83,23 @@ function itemBadgeClass(status: string): string {
   return "bg-amber-50 text-amber-700";
 }
 
+function failureAdvice(message: string | null): string | null {
+  if (!message) return null;
+  if (message.includes("过小") || message.includes("内容过少") || message.includes("可识别视觉内容") || message.includes("无法处理该图片")) {
+    return "建议更换更清晰或更大尺寸图片。重试可能仍会失败。";
+  }
+  if (message.includes("格式") || message.includes("文件损坏")) {
+    return "建议重新导出为 JPG、PNG 或 WebP 后再上传。重试可能仍会失败。";
+  }
+  if (message.includes("超时") || message.includes("服务端异常") || message.includes("请求过快")) {
+    return "建议稍后重试，批量任务可先降低并发为 1。";
+  }
+  if (message.includes("内容安全")) {
+    return "建议更换图片内容或忽略该项。重试可能仍会失败。";
+  }
+  return "可以先重试一次；如果仍失败，建议更换图片或忽略该项。";
+}
+
 export function BatchAnalyzeWorkspace({ initialTasks = [], initialTask = null }: BatchAnalyzeWorkspaceProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -430,7 +447,12 @@ export function BatchAnalyzeWorkspace({ initialTasks = [], initialTask = null }:
                 <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-medium ${itemBadgeClass(item.status)}`}>{statusLabel(item.status)}</span>
               </div>
               <p className="mt-2 text-xs text-slate-500">{item.mimeType ?? "未知格式"} · {formatBytes(item.size)}</p>
-              {item.errorMessage ? <p className="mt-3 rounded-md bg-rose-50 p-2 text-xs text-rose-700">{item.errorMessage}</p> : null}
+              {item.errorMessage ? (
+                <div className="mt-3 rounded-md bg-rose-50 p-2 text-xs text-rose-700">
+                  <p className="font-medium">失败原因：{item.errorMessage}</p>
+                  {failureAdvice(item.errorMessage) ? <p className="mt-1 text-rose-600">建议操作：{failureAdvice(item.errorMessage)}</p> : null}
+                </div>
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 {item.analysisId ? (
                   <Link href={`/library/${item.analysisId}`} className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white">
