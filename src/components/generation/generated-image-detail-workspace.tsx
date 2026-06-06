@@ -5,6 +5,9 @@ import { useState } from "react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { imageEvaluationProgress, imageGenerationProgress } from "@/lib/ui/operation-progress-presets";
 
 type EvaluationResult = {
   overallScore: number;
@@ -120,10 +123,12 @@ export function GeneratedImageDetailWorkspace({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   async function evaluate() {
     setIsEvaluating(true);
     setError(null);
+    startProgress(imageEvaluationProgress);
 
     try {
       const response = await fetch(`/api/generated-images/${imageId}/evaluate`, {
@@ -132,14 +137,19 @@ export function GeneratedImageDetailWorkspace({
       const data = (await response.json()) as EvaluateResponse;
 
       if (!response.ok || !data.ok) {
-        setError(data.ok ? "评估失败" : data.error);
+        const message = data.ok ? "评估失败" : data.error;
+        setError(message);
+        failProgress(message);
         return;
       }
 
       setEvaluation(data.result);
       setEvaluationId(data.evaluation.id);
+      completeProgress("生成图评估已完成");
     } catch {
-      setError("评估失败，请检查网络或稍后重试");
+      const message = "评估失败，请检查网络或稍后重试";
+      setError(message);
+      failProgress(message);
     } finally {
       setIsEvaluating(false);
     }
@@ -150,6 +160,7 @@ export function GeneratedImageDetailWorkspace({
     setIsGenerating(true);
     setGenerateError(null);
     setGeneratedImage(null);
+    startProgress(imageGenerationProgress);
 
     try {
       const response = await fetch("/api/images/generate", {
@@ -168,13 +179,18 @@ export function GeneratedImageDetailWorkspace({
       const data = (await response.json()) as GenerateResponse;
 
       if (!response.ok || !data.ok) {
-        setGenerateError(data.ok ? "生成失败" : data.error);
+        const message = data.ok ? "生成失败" : data.error;
+        setGenerateError(message);
+        failProgress(message);
         return;
       }
 
       setGeneratedImage(data.image);
+      completeProgress("改良 Prompt 生成图已完成");
     } catch {
-      setGenerateError("生成失败，请检查网络或稍后重试");
+      const message = "生成失败，请检查网络或稍后重试";
+      setGenerateError(message);
+      failProgress(message);
     } finally {
       setIsGenerating(false);
     }
@@ -182,6 +198,7 @@ export function GeneratedImageDetailWorkspace({
 
   return (
     <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-slate-950">生成图效果评估</h2>

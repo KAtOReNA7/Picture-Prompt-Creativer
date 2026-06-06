@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CopyButton } from "@/components/ui/copy-button";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { promptSegmentationProgress } from "@/lib/ui/operation-progress-presets";
 
 type LibraryDetailActionsProps = {
   analysisId: string;
@@ -16,10 +19,12 @@ export function LibraryDetailActions({ analysisId, reversePrompt, negativePrompt
   const [isSegmenting, setIsSegmenting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   async function segmentPrompt() {
     setIsSegmenting(true);
     setMessage(null);
+    startProgress(promptSegmentationProgress);
 
     try {
       const response = await fetch("/api/prompts/segment", {
@@ -30,14 +35,19 @@ export function LibraryDetailActions({ analysisId, reversePrompt, negativePrompt
       const data = (await response.json()) as { ok: boolean; error?: string };
 
       if (!response.ok || !data.ok) {
-        setMessage(data.error ?? "重新拆解 Prompt 失败");
+        const nextMessage = data.error ?? "重新拆解 Prompt 失败";
+        setMessage(nextMessage);
+        failProgress(nextMessage);
         return;
       }
 
       setMessage("Prompt 模块已重新拆解");
+      completeProgress("Prompt 模块已重新拆解");
       router.refresh();
     } catch {
-      setMessage("重新拆解 Prompt 失败，请稍后重试");
+      const nextMessage = "重新拆解 Prompt 失败，请稍后重试";
+      setMessage(nextMessage);
+      failProgress(nextMessage);
     } finally {
       setIsSegmenting(false);
     }
@@ -72,6 +82,7 @@ export function LibraryDetailActions({ analysisId, reversePrompt, negativePrompt
 
   return (
     <div className="space-y-3">
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <div className="flex flex-wrap gap-2">
         <Link
           href="/library"

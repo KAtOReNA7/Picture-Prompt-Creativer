@@ -546,3 +546,37 @@
 - 英文 Prompt 语义导入：成功，`importedPromptLanguage=en`，`reversePrompt` 为英文。
 - 中文 Prompt 直接导入：成功，`importMode=direct`，不拒绝中文，返回“直接导入模式不会自动转英文”的 warning。
 - `/library/[id]`：HTTP 200，显示导入来源、原始导入 Prompt、检测语言和 AI 整理后的 reversePrompt。
+
+## 阶段 14B：全局预估操作进度弹窗
+
+完成内容：
+
+- 新增 `src/components/ui/operation-progress-modal.tsx`，展示操作标题、当前步骤、预估进度条、百分比、成功状态、失败状态和关闭按钮。
+- 新增 `src/hooks/use-operation-progress.ts`，支持 `startProgress`、`setStep`、`completeProgress`、`failProgress`、`resetProgress` 和 `hideProgress`，请求进行中自动推进到 85%，不会在完成前自动到 100%。
+- 新增 `src/lib/ui/operation-progress-presets.ts`，覆盖图片分析、Prompt 拆解、风格迁移、图片生成、生成图评估、Prompt 导入语义整理、PromptVariant AI 润色和 AI 推荐标签。
+- `/analyze` 接入图片分析和 Prompt 拆解进度弹窗。
+- `/fusion` 接入风格迁移进度弹窗。
+- 共享 `ImageGenerationPanel` 接入图片生成进度弹窗，覆盖 `/fusion` 和 `/library/[id]` 中的测试图生成。
+- `/generated-images/[id]` 接入生成图评估和改良 Prompt 再生成进度弹窗。
+- `/library/[id]` 顶部重新拆解 Prompt 接入进度弹窗。
+- 标签管理中的 AI 推荐标签接入进度弹窗。
+- `PromptVariantActions` 接入 AI 润色和生成测试图进度弹窗，覆盖 `/library/[id]` 和 `/prompt-variants/[id]`。
+- `/import` 的 AI 语义整理导入接入进度弹窗；直接导入保持快速操作。
+- README 和验收测试文档补充“预估进度”说明。
+
+验证结果：
+
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning
+
+页面抽查：
+
+- `/analyze`：HTTP 200，图片分析和 Prompt 拆解操作已接入进度弹窗。
+- `/fusion`：HTTP 200，风格迁移已接入进度弹窗；生成测试图由共享 `ImageGenerationPanel` 接入。
+- `/import`：HTTP 200，AI 语义整理导入已接入进度弹窗。
+- `/generated-images`：HTTP 200。
+- `/generated-images/[id]`：HTTP 200，生成图评估和改良 Prompt 再生成已接入进度弹窗。
+- `/library`：HTTP 200。
+- `/library/[id]`：HTTP 200，重新拆解、测试图生成、AI 推荐标签、PromptVariant AI 润色和测试图生成已接入进度弹窗。
+- `/prompt-variants/[id]`：HTTP 200，AI 润色和测试图生成已接入进度弹窗。

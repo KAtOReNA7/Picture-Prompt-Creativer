@@ -5,6 +5,9 @@ import { useState } from "react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { imageGenerationProgress } from "@/lib/ui/operation-progress-presets";
 
 type SourceType = "analysis_reverse_prompt" | "fusion_prompt" | "custom_prompt";
 
@@ -67,11 +70,13 @@ export function ImageGenerationPanel({
   const [image, setImage] = useState<GeneratedImage | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   async function generate() {
     setIsGenerating(true);
     setError(null);
     setImage(null);
+    startProgress(imageGenerationProgress);
 
     try {
       const response = await fetch("/api/images/generate", {
@@ -90,13 +95,18 @@ export function ImageGenerationPanel({
       const data = (await response.json()) as GenerateResponse;
 
       if (!response.ok || !data.ok) {
-        setError(data.ok ? "图片生成失败" : data.error);
+        const message = data.ok ? "图片生成失败" : data.error;
+        setError(message);
+        failProgress(message);
         return;
       }
 
       setImage(data.image);
+      completeProgress("测试图已生成");
     } catch {
-      setError("图片生成失败，请检查网络或稍后重试");
+      const message = "图片生成失败，请检查网络或稍后重试";
+      setError(message);
+      failProgress(message);
     } finally {
       setIsGenerating(false);
     }
@@ -104,6 +114,7 @@ export function ImageGenerationPanel({
 
   return (
     <div className={compact ? "space-y-3" : "rounded-md border border-slate-200 bg-white p-4"}>
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
         <button

@@ -6,6 +6,9 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { promptFusionProgress } from "@/lib/ui/operation-progress-presets";
 
 type AnalysisListItem = {
   id: string;
@@ -115,6 +118,7 @@ export function FusionWorkspace() {
   const [isFusing, setIsFusing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fusionError, setFusionError] = useState<string | null>(null);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   useEffect(() => {
     let isActive = true;
@@ -173,6 +177,7 @@ export function FusionWorkspace() {
     setFusionError(null);
     setResult(null);
     setFusion(null);
+    startProgress(promptFusionProgress);
 
     try {
       const response = await fetch("/api/prompts/fuse", {
@@ -186,14 +191,19 @@ export function FusionWorkspace() {
       const data = (await response.json()) as FusionResponse;
 
       if (!response.ok || !data.ok) {
-        setFusionError(data.ok ? "风格迁移 Prompt 生成失败" : data.error);
+        const message = data.ok ? "风格迁移 Prompt 生成失败" : data.error;
+        setFusionError(message);
+        failProgress(message);
         return;
       }
 
       setResult(data.result);
       setFusion(data.fusion);
+      completeProgress("风格迁移 Prompt 已生成");
     } catch {
-      setFusionError("风格迁移 Prompt 生成失败，请检查网络或稍后重试");
+      const message = "风格迁移 Prompt 生成失败，请检查网络或稍后重试";
+      setFusionError(message);
+      failProgress(message);
     } finally {
       setIsFusing(false);
     }
@@ -220,6 +230,7 @@ export function FusionWorkspace() {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-xl font-semibold text-slate-950">历史分析记录</h2>
         <div className="mt-4 grid gap-3">

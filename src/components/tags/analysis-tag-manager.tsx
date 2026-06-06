@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { suggestTagsProgress } from "@/lib/ui/operation-progress-presets";
 
 type TagItem = {
   id: string;
@@ -30,6 +33,7 @@ export function AnalysisTagManager({ analysisId, initialTags, allTags }: Analysi
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   async function updateTagIds(tagIds: string[]) {
     const response = await fetch(`/api/analyses/${analysisId}/tags`, {
@@ -106,6 +110,7 @@ export function AnalysisTagManager({ analysisId, initialTags, allTags }: Analysi
     setIsLoading(true);
     setError(null);
     setMessage(null);
+    startProgress(suggestTagsProgress);
     try {
       const response = await fetch(`/api/analyses/${analysisId}/suggest-tags`, { method: "POST" });
       const data = (await response.json()) as { ok: boolean; error?: string; suggestedTags?: SuggestedTag[] };
@@ -113,8 +118,11 @@ export function AnalysisTagManager({ analysisId, initialTags, allTags }: Analysi
       setSuggestions(data.suggestedTags);
       setSelectedSuggestions([]);
       setMessage("AI 已返回标签建议，请手动选择后添加。");
+      completeProgress("AI 标签建议已返回");
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "AI 推荐标签失败");
+      const nextError = requestError instanceof Error ? requestError.message : "AI 推荐标签失败";
+      setError(nextError);
+      failProgress(nextError);
     } finally {
       setIsLoading(false);
     }
@@ -157,6 +165,7 @@ export function AnalysisTagManager({ analysisId, initialTags, allTags }: Analysi
 
   return (
     <section id="tags" className="mt-6 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-cyan-700">分类整理</p>

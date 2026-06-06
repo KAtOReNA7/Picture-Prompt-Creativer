@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import { ImageUploader, UploadedImage } from "@/components/upload/image-uploader";
 import { ErrorState } from "@/components/ui/error-state";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { promptImportProgress } from "@/lib/ui/operation-progress-presets";
 
 type ImportMode = "semantic" | "direct";
 
@@ -125,6 +128,7 @@ export function ImportPromptForm() {
   const [image, setImage] = useState<UploadedImage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   const tags = useMemo(
     () =>
@@ -152,6 +156,9 @@ export function ImportPromptForm() {
     }
 
     setIsSubmitting(true);
+    if (importMode === "semantic") {
+      startProgress(promptImportProgress);
+    }
 
     try {
       const response = await fetch("/api/prompts/import", {
@@ -169,13 +176,24 @@ export function ImportPromptForm() {
       const data = (await response.json()) as ImportResponse;
 
       if (!response.ok || !data.ok) {
-        setError(data.ok ? "导入失败" : data.error);
+        const message = data.ok ? "导入失败" : data.error;
+        setError(message);
+        if (importMode === "semantic") {
+          failProgress(message);
+        }
         return;
       }
 
+      if (importMode === "semantic") {
+        completeProgress("Prompt 已整理并保存到库");
+      }
       router.push(`/library/${data.analysis.id}`);
     } catch {
-      setError("导入失败，请检查网络或稍后重试");
+      const message = "导入失败，请检查网络或稍后重试";
+      setError(message);
+      if (importMode === "semantic") {
+        failProgress(message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -183,6 +201,7 @@ export function ImportPromptForm() {
 
   return (
     <form className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]" onSubmit={(event) => void submit(event)}>
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <section className="space-y-5 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
         <div>
           <h2 className="text-xl font-semibold text-slate-950">Prompt 导入信息</h2>

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CopyButton } from "@/components/ui/copy-button";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { imageGenerationProgress, promptVariantPolishProgress } from "@/lib/ui/operation-progress-presets";
 
 type VariantLike = {
   id: string;
@@ -42,12 +45,14 @@ export function PromptVariantActions({ variant }: { variant: VariantLike }) {
   const [generatedImageId, setGeneratedImageId] = useState<string | null>(null);
   const [isPolishing, setIsPolishing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   const activeVariant = polishedVariant ?? variant;
 
   async function polish() {
     setIsPolishing(true);
     setMessage(null);
+    startProgress(promptVariantPolishProgress);
 
     try {
       const response = await fetch(`/api/prompt-variants/${activeVariant.id}/polish`, {
@@ -56,14 +61,19 @@ export function PromptVariantActions({ variant }: { variant: VariantLike }) {
       const data = (await response.json()) as VariantResponse;
 
       if (!response.ok || !data.ok) {
-        setMessage(data.ok ? "AI 润色失败" : data.error);
+        const nextMessage = data.ok ? "AI 润色失败" : data.error;
+        setMessage(nextMessage);
+        failProgress(nextMessage);
         return;
       }
 
       setPolishedVariant(data.variant);
       setMessage(data.changeSummary ?? "AI 润色完成");
+      completeProgress("AI 润色已完成");
     } catch {
-      setMessage("AI 润色失败，请稍后重试");
+      const nextMessage = "AI 润色失败，请稍后重试";
+      setMessage(nextMessage);
+      failProgress(nextMessage);
     } finally {
       setIsPolishing(false);
     }
@@ -73,6 +83,7 @@ export function PromptVariantActions({ variant }: { variant: VariantLike }) {
     setIsGenerating(true);
     setMessage(null);
     setGeneratedImageId(null);
+    startProgress(imageGenerationProgress);
 
     try {
       const response = await fetch("/api/images/generate", {
@@ -91,14 +102,19 @@ export function PromptVariantActions({ variant }: { variant: VariantLike }) {
       const data = (await response.json()) as GenerateResponse;
 
       if (!response.ok || !data.ok) {
-        setMessage(data.ok ? "生成测试图失败" : data.error);
+        const nextMessage = data.ok ? "生成测试图失败" : data.error;
+        setMessage(nextMessage);
+        failProgress(nextMessage);
         return;
       }
 
       setGeneratedImageId(data.image.id);
       setMessage("生成测试图成功");
+      completeProgress("测试图已生成");
     } catch {
-      setMessage("生成测试图失败，请稍后重试");
+      const nextMessage = "生成测试图失败，请稍后重试";
+      setMessage(nextMessage);
+      failProgress(nextMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -106,6 +122,7 @@ export function PromptVariantActions({ variant }: { variant: VariantLike }) {
 
   return (
     <div className="space-y-3">
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <div className="flex flex-wrap gap-2">
         <CopyButton text={activeVariant.composedPrompt} label="复制 Prompt" />
         <button

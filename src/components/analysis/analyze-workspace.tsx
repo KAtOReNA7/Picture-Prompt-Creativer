@@ -5,7 +5,10 @@ import Link from "next/link";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 import { CopyButton } from "@/components/ui/copy-button";
+import { OperationProgressModal } from "@/components/ui/operation-progress-modal";
 import { ImageUploader, type UploadedImage } from "@/components/upload/image-uploader";
+import { useOperationProgress } from "@/hooks/use-operation-progress";
+import { imageAnalysisProgress, promptSegmentationProgress } from "@/lib/ui/operation-progress-presets";
 
 type ReplaceableField = {
   field: string;
@@ -232,6 +235,7 @@ export function AnalyzeWorkspace() {
   const [isSegmenting, setIsSegmenting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [segmentError, setSegmentError] = useState<string | null>(null);
+  const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
 
   async function startAnalysis() {
     if (!uploadedImage) {
@@ -245,6 +249,7 @@ export function AnalyzeWorkspace() {
     setResult(null);
     setAnalysis(null);
     setSegmentation(null);
+    startProgress(imageAnalysisProgress);
 
     try {
       const response = await fetch("/api/images/analyze", {
@@ -257,14 +262,19 @@ export function AnalyzeWorkspace() {
       const data = (await response.json()) as AnalyzeResponse;
 
       if (!response.ok || !data.ok) {
-        setError(data.ok ? "图片分析失败。" : data.error);
+        const message = data.ok ? "图片分析失败。" : data.error;
+        setError(message);
+        failProgress(message);
         return;
       }
 
       setAnalysis(data.analysis);
       setResult(data.result);
+      completeProgress("图片分析已完成");
     } catch {
-      setError("图片分析失败，请检查网络或稍后重试。");
+      const message = "图片分析失败，请检查网络或稍后重试。";
+      setError(message);
+      failProgress(message);
     } finally {
       setIsAnalyzing(false);
     }
@@ -278,6 +288,7 @@ export function AnalyzeWorkspace() {
 
     setIsSegmenting(true);
     setSegmentError(null);
+    startProgress(promptSegmentationProgress);
 
     try {
       const response = await fetch("/api/prompts/segment", {
@@ -290,7 +301,9 @@ export function AnalyzeWorkspace() {
       const data = (await response.json()) as SegmentResponse;
 
       if (!response.ok || !data.ok) {
-        setSegmentError(data.ok ? "Prompt 拆解失败。" : data.error);
+        const message = data.ok ? "Prompt 拆解失败。" : data.error;
+        setSegmentError(message);
+        failProgress(message);
         return;
       }
 
@@ -300,8 +313,11 @@ export function AnalyzeWorkspace() {
         templateSummary: data.templateSummary,
         replacementStrategy: data.replacementStrategy,
       });
+      completeProgress("Prompt 模块拆解已完成");
     } catch {
-      setSegmentError("Prompt 拆解失败，请检查网络或稍后重试。");
+      const message = "Prompt 拆解失败，请检查网络或稍后重试。";
+      setSegmentError(message);
+      failProgress(message);
     } finally {
       setIsSegmenting(false);
     }
@@ -309,6 +325,7 @@ export function AnalyzeWorkspace() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+      <OperationProgressModal {...progress} onClose={hideProgress} />
       <div>
         <ImageUploader
           onUploaded={(image) => {

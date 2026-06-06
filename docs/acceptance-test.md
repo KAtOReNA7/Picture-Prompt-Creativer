@@ -141,3 +141,10 @@
 - 操作步骤：运行 `git status`、`git log --oneline -5`、`git push origin main`。
 - 预期结果：工作区干净，最新提交已推送。
 - 失败排查：检查网络、GitHub 权限、远程仓库是否有冲突。
+
+## 21. 预估进度弹窗
+
+- 前置条件：OpenAI 配置可用，已有可执行耗时操作的数据。
+- 操作步骤：分别在 `/analyze` 执行图片分析和 Prompt 拆解，在 `/fusion` 执行风格迁移和生成测试图，在 `/generated-images/[id]` 执行生成图评估，在 `/import` 执行 AI 语义整理导入，在 `/prompt-variants/[id]` 执行 AI 润色和生成测试图。
+- 预期结果：操作开始后显示中文弹窗，包含操作名称、当前步骤、预估百分比和“此为预估进度”的说明；成功后进度到 100% 并显示已完成；失败后显示中文错误，页面按钮恢复可点击。
+- 失败排查：检查对应客户端组件是否渲染 `OperationProgressModal`，检查 hook 是否调用 `startProgress`、`completeProgress` 和 `failProgress`，确认错误信息没有英文堆栈或完整 API Key。
