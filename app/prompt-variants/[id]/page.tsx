@@ -99,7 +99,7 @@ export default async function PromptVariantDetailPage({ params }: PromptVariantD
           <section className="rounded-md border border-cyan-200 bg-cyan-50 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-cyan-950">Composed Prompt</h2>
-              <CopyButton text={variant.composedPrompt} />
+              <CopyButton text={variant.composedPrompt} label="复制 Prompt" />
             </div>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">{variant.composedPrompt}</p>
           </section>
@@ -107,7 +107,7 @@ export default async function PromptVariantDetailPage({ params }: PromptVariantD
           <section className="rounded-md border border-rose-200 bg-rose-50 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-rose-950">Negative Prompt</h2>
-              {variant.negativePrompt ? <CopyButton text={variant.negativePrompt} /> : null}
+              {variant.negativePrompt ? <CopyButton text={variant.negativePrompt} label="复制 Negative Prompt" /> : null}
             </div>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">{variant.negativePrompt ?? "无"}</p>
           </section>

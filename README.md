@@ -15,6 +15,8 @@
 
 ## 本地启动
 
+### 第一次启动
+
 ```bash
 npm install
 npx prisma generate
@@ -27,6 +29,53 @@ npm run dev
 ```text
 http://localhost:3000
 ```
+
+建议第一次启动后依次打开：
+
+1. `/diagnostics`：确认环境、Git、OpenAI `/models` 状态。
+2. `/settings`：确认 API Key 只显示掩码，模型名匹配。
+3. `/maintenance`：确认数据库统计、文件夹大小和备份功能。
+
+## 完整使用流程
+
+1. 上传图片或导入已有英文 Prompt。
+2. 生成图片逆向分析或保存无图 Prompt。
+3. 拆解 Prompt 模块，标记可替换字段。
+4. 输入新需求，做风格迁移。
+5. 生成测试图。
+6. 评估生成图效果。
+7. 使用改良 Prompt 再生成。
+8. 在 Prompt 库中编辑模板版本。
+9. 添加标签，建立合集。
+10. 导出 JSON / Markdown，定期创建备份。
+
+## 常见工作流
+
+### 从图片开始
+
+打开 `/analyze`，上传图片，点击“开始 AI 分析”，再点击“拆解 Prompt”。之后可以在 `/fusion` 输入新需求，生成新的 image2 Prompt。
+
+### 从已有 Prompt 开始
+
+打开 `/import`，填写标题和英文 Prompt。导入后进入 `/library/[id]`，继续拆解、风格迁移、标签整理和生成测试图。
+
+### 从 Prompt 库复用
+
+打开 `/library`，使用搜索、标签筛选和排序找到已有记录。进入详情后复制 Prompt、编辑模板版本，或加入合集。
+
+### 生成图后评估和改良
+
+打开 `/generated-images/[id]`，点击评估。查看评分、问题和改良 Prompt，再用改良 Prompt 生成新图。
+
+### 建立合集并导出
+
+打开 `/collections` 创建合集。可以从 `/library` 批量加入 analysis，也可以从 PromptVariant 或 GeneratedImage 详情加入合集。进入合集详情后导出 JSON 或 Markdown。
+
+## 数据备份建议
+
+- 每次完成一批重要 Prompt 或生成图后，在 `/maintenance` 创建备份。
+- 换电脑前先创建备份 zip，再复制到新电脑恢复。
+- 不要把 `.env.local`、`prisma/dev.db`、`uploads/`、`exports/`、`backups/` 提交到 GitHub。
 
 ## .env.local 示例
 

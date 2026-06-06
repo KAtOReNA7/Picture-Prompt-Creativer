@@ -237,7 +237,7 @@ export function GeneratedImageDetailWorkspace({
           <div className="rounded-md border border-cyan-200 bg-cyan-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-cyan-950">改良版英文 Prompt</h3>
-              <CopyButton text={evaluation.improvedPrompt} />
+              <CopyButton text={evaluation.improvedPrompt} label="复制 Prompt" />
             </div>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{evaluation.improvedPrompt}</p>
           </div>
@@ -245,7 +245,7 @@ export function GeneratedImageDetailWorkspace({
           <div className="rounded-md border border-rose-200 bg-rose-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-rose-950">改良版 Negative Prompt</h3>
-              <CopyButton text={evaluation.improvedNegativePrompt} />
+              <CopyButton text={evaluation.improvedNegativePrompt} label="复制 Negative Prompt" />
             </div>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{evaluation.improvedNegativePrompt}</p>
           </div>

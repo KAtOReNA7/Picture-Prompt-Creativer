@@ -478,3 +478,41 @@
 - `/api/maintenance/logs`：成功返回日志列表。
 - `/diagnostics` 新增状态：HTTP 200，显示数据库记录数量、文件夹大小和最近错误日志。
 - `backups/`：成功生成 zip 文件，并已被 Git 忽略。
+
+## 阶段 13：验收测试、体验修复与回归清单
+
+完成内容：
+
+- 新增 `docs/acceptance-test.md`，覆盖 20 项人工验收流程。
+- 新增 `docs/api-regression.md`，列出主要 API 的方法、路径、用途、参数、失败场景和副作用。
+- 统一共享 `CopyButton`：复制成功显示中文提示，复制失败显示中文错误。
+- 移除 `/analyze` 本地复制按钮，改用共享复制组件。
+- 统一主要 Prompt、Negative Prompt、图片地址、下载地址复制文案。
+- `/generated-images` 列表新增“复制图片地址”。
+- `/collections/[id]` 导出后显示下载地址并支持“复制下载地址”。
+- 增强 `EmptyState`，支持真实跳转入口。
+- `/library`、`/fusion`、`/generated-images` 空状态补充下一步跳转。
+- `/collections` 和 `/collections/[id]` 空状态补充中文说明和下一步入口。
+- 导出 JSON / Markdown 补齐生成图评估摘要，包括评分、摘要和改良 Prompt 信息。
+- README 增补第一次启动、完整使用流程、常见工作流和数据备份建议。
+- `package.json` version 更新为 `0.5.0`，并在 `/settings` 显示 `appVersion`。
+
+验证结果：
+
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning
+
+页面抽查：
+
+- `/library`：HTTP 200，无错误覆盖层。
+- `/library/[id]`：HTTP 200，无错误覆盖层。
+- `/fusion`：HTTP 200，无错误覆盖层。
+- `/generated-images`：HTTP 200，无错误覆盖层。
+- `/generated-images/[id]`：HTTP 200，无错误覆盖层。
+- `/collections`：HTTP 200，无错误覆盖层。
+- `/collections/[id]`：HTTP 200，无错误覆盖层。
+- `/maintenance`：HTTP 200，无错误覆盖层。
+- `/settings`：HTTP 200，无错误覆盖层，显示 `appVersion: 0.5.0`。
+- `/diagnostics`：HTTP 200，无错误覆盖层。
+- JSON 导出字段：包含 analysis 基础信息、tags、reversePrompt、negativePrompt、segments、fusions、variants、generatedImages 和 evaluations 摘要。

@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { AiStatusPanel } from "@/components/settings/ai-status-panel";
+import packageJson from "../../package.json";
 
 export default function SettingsPage() {
   return (
@@ -13,6 +14,11 @@ export default function SettingsPage() {
       </div>
 
       <AiStatusPanel />
+
+      <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-sm font-medium text-slate-900">版本信息</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">appVersion：{packageJson.version}</p>
+      </section>
 
       <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-sm font-medium text-slate-900">安全说明</p>

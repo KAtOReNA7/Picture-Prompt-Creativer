@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { CopyButton } from "@/components/ui/copy-button";
 
 type CollectionDetail = {
   id: string;
@@ -39,6 +40,7 @@ export function CollectionDetailManager({ initialCollection, initialItems }: Col
   const [items, setItems] = useState(initialItems);
   const [filter, setFilter] = useState("all");
   const [message, setMessage] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
 
@@ -93,6 +95,7 @@ export function CollectionDetailManager({ initialCollection, initialItems }: Col
       });
       const data = (await response.json()) as { ok: boolean; error?: string; export?: { filename: string; downloadUrl: string } };
       if (!response.ok || !data.ok || !data.export) throw new Error(data.error ?? "导出合集失败");
+      setDownloadUrl(data.export.downloadUrl);
       setMessage(`导出文件已生成：${data.export.filename}`);
       window.open(data.export.downloadUrl, "_blank");
     } catch (requestError) {
@@ -122,6 +125,12 @@ export function CollectionDetailManager({ initialCollection, initialItems }: Col
           </button>
         </div>
         {message ? <p className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p> : null}
+        {downloadUrl ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-cyan-50 p-3 text-sm text-cyan-800">
+            <span className="break-all">下载地址：{downloadUrl}</span>
+            <CopyButton text={downloadUrl} label="复制下载地址" />
+          </div>
+        ) : null}
         {error ? <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
       </section>
 
@@ -144,7 +153,7 @@ export function CollectionDetailManager({ initialCollection, initialItems }: Col
       </div>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
-        {filteredItems.map((item) => (
+        {filteredItems.length > 0 ? filteredItems.map((item) => (
           <article key={item.id} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
             {item.imagePreviewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -174,7 +183,14 @@ export function CollectionDetailManager({ initialCollection, initialItems }: Col
               </button>
             </div>
           </article>
-        ))}
+        )) : (
+          <div className="rounded-md border border-dashed border-slate-300 bg-white p-8 text-center lg:col-span-3">
+            <p className="text-sm text-slate-500">当前合集还没有素材。可以回到 Prompt 库选择记录后加入合集。</p>
+            <Link href="/library" className="mt-4 inline-flex rounded-md bg-cyan-600 px-3 py-2 text-sm font-medium text-white">
+              去 Prompt 库选择素材
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );

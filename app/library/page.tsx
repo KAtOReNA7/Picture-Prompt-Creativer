@@ -215,6 +215,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
           title="暂无 Prompt 记录"
           description="可以先上传图片完成 AI 逆向分析，也可以直接导入已有英文 Prompt。"
           actionLabel="去图片逆向分析"
+          actionHref="/analyze"
         />
       )}
     </AppShell>

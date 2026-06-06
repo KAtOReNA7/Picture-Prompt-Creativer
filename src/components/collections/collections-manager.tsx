@@ -98,7 +98,7 @@ export function CollectionsManager({ initialCollections }: CollectionsManagerPro
       </div>
 
       <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((collection) => (
+        {filtered.length > 0 ? filtered.map((collection) => (
           <article key={collection.id} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-950">{collection.name}</h2>
@@ -113,7 +113,14 @@ export function CollectionsManager({ initialCollections }: CollectionsManagerPro
               进入合集
             </Link>
           </article>
-        ))}
+        )) : (
+          <div className="rounded-md border border-dashed border-slate-300 bg-white p-8 text-center md:col-span-2 xl:col-span-3">
+            <p className="text-sm text-slate-500">暂无合集。可以先填写上方表单创建一个项目合集，再从 Prompt 库加入素材。</p>
+            <Link href="/library" className="mt-4 inline-flex rounded-md bg-cyan-600 px-3 py-2 text-sm font-medium text-white">
+              去 Prompt 库选择素材
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );

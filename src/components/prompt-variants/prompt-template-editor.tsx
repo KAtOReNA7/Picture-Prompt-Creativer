@@ -222,7 +222,7 @@ export function PromptTemplateEditor({ analysisId, segments, defaultNegativeProm
         <div className="mt-6 rounded-md border border-cyan-200 bg-cyan-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-cyan-950">{variant.title}</h3>
-            <CopyButton text={variant.composedPrompt} />
+            <CopyButton text={variant.composedPrompt} label="复制 Prompt" />
           </div>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{variant.composedPrompt}</p>
           <div className="mt-4 rounded-md bg-white/70 p-3">

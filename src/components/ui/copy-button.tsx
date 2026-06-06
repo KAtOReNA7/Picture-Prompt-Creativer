@@ -11,11 +11,19 @@ type CopyButtonProps = {
 
 export function CopyButton({ text, label = "一键复制", copiedLabel = "已复制", className }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState(false);
 
   async function copy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setError(false);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setError(true);
+      setCopied(false);
+      window.setTimeout(() => setError(false), 1800);
+    }
   }
 
   return (
@@ -27,7 +35,7 @@ export function CopyButton({ text, label = "一键复制", copiedLabel = "已复
       }
       onClick={() => void copy()}
     >
-      {copied ? copiedLabel : label}
+      {error ? "复制失败" : copied ? copiedLabel : label}
     </button>
   );
 }

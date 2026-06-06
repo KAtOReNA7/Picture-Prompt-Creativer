@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CopyButton } from "@/components/ui/copy-button";
 import { prisma } from "@/lib/db/prisma";
 
 function formatDate(date: Date): string {
@@ -83,20 +84,21 @@ export default async function GeneratedImagesPage() {
                   <p className="mt-2 text-xs text-slate-500">评估次数：{image._count.evaluations}</p>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <Link
                     href={`/generated-images/${image.id}`}
                     className="rounded-md bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-700"
                   >
                     查看详情
                   </Link>
+                  <CopyButton text={fileUrl(image.id)} label="复制图片地址" />
                 </div>
               </article>
             );
           })}
         </section>
       ) : (
-        <EmptyState title="暂无生成图" description="请先在风格迁移页或 Prompt 详情页生成测试图。" actionLabel="去风格迁移" />
+        <EmptyState title="暂无生成图" description="请先在风格迁移页或 Prompt 详情页生成测试图。" actionLabel="去风格迁移" actionHref="/fusion" />
       )}
     </AppShell>
   );

@@ -93,7 +93,7 @@ export function LibraryDetailActions({ analysisId, reversePrompt, negativePrompt
         >
           {isSegmenting ? "拆解中" : "重新拆解 Prompt"}
         </button>
-        {reversePrompt ? <CopyButton text={reversePrompt} label="复制 Reverse Prompt" /> : null}
+        {reversePrompt ? <CopyButton text={reversePrompt} label="复制 Prompt" /> : null}
         {negativePrompt ? <CopyButton text={negativePrompt} label="复制 Negative Prompt" /> : null}
         <button
           type="button"

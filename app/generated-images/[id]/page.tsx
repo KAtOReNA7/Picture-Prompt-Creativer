@@ -140,7 +140,7 @@ export default async function GeneratedImageDetailPage({ params }: GeneratedImag
           <section className="rounded-md border border-cyan-200 bg-cyan-50 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-cyan-950">生成 Prompt</h2>
-              <CopyButton text={image.prompt} />
+              <CopyButton text={image.prompt} label="复制 Prompt" />
             </div>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">{image.prompt}</p>
           </section>
@@ -148,7 +148,7 @@ export default async function GeneratedImageDetailPage({ params }: GeneratedImag
           <section className="rounded-md border border-rose-200 bg-rose-50 p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-rose-950">Negative Prompt</h2>
-              {image.negativePrompt ? <CopyButton text={image.negativePrompt} /> : null}
+              {image.negativePrompt ? <CopyButton text={image.negativePrompt} label="复制 Negative Prompt" /> : null}
             </div>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">{image.negativePrompt ?? "无"}</p>
           </section>

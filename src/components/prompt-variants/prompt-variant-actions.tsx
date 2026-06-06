@@ -107,7 +107,7 @@ export function PromptVariantActions({ variant }: { variant: VariantLike }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <CopyButton text={activeVariant.composedPrompt} />
+        <CopyButton text={activeVariant.composedPrompt} label="复制 Prompt" />
         <button
           type="button"
           disabled={isPolishing}

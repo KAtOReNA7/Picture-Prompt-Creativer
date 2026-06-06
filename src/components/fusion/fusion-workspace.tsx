@@ -213,6 +213,7 @@ export function FusionWorkspace() {
         title="暂无可用于风格迁移的分析记录"
         description="请先前往图片逆向分析页面上传图片并完成 AI 分析，或者直接导入已有 Prompt。"
         actionLabel="去图片逆向分析"
+        actionHref="/analyze"
       />
     );
   }
@@ -323,7 +324,7 @@ export function FusionWorkspace() {
             <div className="mt-6 rounded-md border border-cyan-200 bg-cyan-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold text-cyan-950">英文 finalPromptEnglish</h3>
-                <CopyButton text={result.finalPromptEnglish} />
+                <CopyButton text={result.finalPromptEnglish} label="复制 Prompt" />
               </div>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{result.finalPromptEnglish}</p>
               {fusion ? (
@@ -344,7 +345,7 @@ export function FusionWorkspace() {
             <div className="mt-6 rounded-md border border-rose-200 bg-rose-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold text-rose-950">英文 negativePromptEnglish</h3>
-                <CopyButton text={result.negativePromptEnglish} />
+                <CopyButton text={result.negativePromptEnglish} label="复制 Negative Prompt" />
               </div>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{result.negativePromptEnglish}</p>
             </div>

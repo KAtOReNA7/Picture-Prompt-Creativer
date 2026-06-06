@@ -128,8 +128,16 @@ async function getAnalysisExportData(ids: string[]) {
         fileUrl: `/api/generated-images/${image.id}/file`,
         latestEvaluation: image.evaluations[0]
           ? {
+              id: image.evaluations[0].id,
               overallScore: image.evaluations[0].overallScore,
+              promptMatchScore: image.evaluations[0].promptMatchScore,
+              styleRetentionScore: image.evaluations[0].styleRetentionScore,
+              commercialPotentialScore: image.evaluations[0].commercialPotentialScore,
               summary: image.evaluations[0].summary,
+              improvementAdvice: image.evaluations[0].improvementAdvice,
+              improvedPrompt: image.evaluations[0].improvedPrompt,
+              improvedNegativePrompt: image.evaluations[0].improvedNegativePrompt,
+              createdAt: image.evaluations[0].createdAt.toISOString(),
             }
           : null,
         createdAt: image.createdAt.toISOString(),
@@ -197,7 +205,16 @@ async function getCollectionExportData(collectionId: string) {
                 id: item.itemId,
                 sourceType: generatedImages.find((image) => image.id === item.itemId)?.sourceType,
                 fileUrl: `/api/generated-images/${item.itemId}/file`,
-                latestEvaluation: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]?.overallScore ?? null,
+                latestEvaluation: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]
+                  ? {
+                      id: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]?.id,
+                      overallScore: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]?.overallScore,
+                      promptMatchScore: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]?.promptMatchScore,
+                      styleRetentionScore: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]?.styleRetentionScore,
+                      summary: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]?.summary,
+                      improvedPrompt: generatedImages.find((image) => image.id === item.itemId)?.evaluations[0]?.improvedPrompt,
+                    }
+                  : null,
               }
             : null
           : null,
@@ -236,7 +253,7 @@ function renderAnalysisMarkdown(analysis: Awaited<ReturnType<typeof getAnalysisE
     "",
     "### GeneratedImage",
     "",
-    ...analysis.generatedImages.map((image) => `- ${image.id}：${image.sourceType}，评分：${image.latestEvaluation?.overallScore ?? "未评估"}`),
+    ...analysis.generatedImages.map((image) => `- ${image.id}：${image.sourceType}，评分：${image.latestEvaluation?.overallScore ?? "未评估"}，摘要：${image.latestEvaluation?.summary ?? "无"}`),
     "",
   ];
 
@@ -261,7 +278,7 @@ function renderMarkdown(type: ExportType, data: unknown): string {
     ...collectionData.items.map((item) => {
       if (item.analysis) return `### ${item.itemTypeLabel}：${item.analysis.title ?? item.itemId}\n\n${renderAnalysisMarkdown(item.analysis)}`;
       if (item.promptVariant) return `### ${item.itemTypeLabel}：${item.promptVariant.title ?? item.itemId}\n\n${item.promptVariant.composedPrompt ?? "无"}`;
-      if (item.generatedImage) return `### ${item.itemTypeLabel}：${item.generatedImage.id}\n\n- 图片：${item.generatedImage.fileUrl}\n- 最近评分：${item.generatedImage.latestEvaluation ?? "未评估"}`;
+      if (item.generatedImage) return `### ${item.itemTypeLabel}：${item.generatedImage.id}\n\n- 图片：${item.generatedImage.fileUrl}\n- 最近评分：${item.generatedImage.latestEvaluation?.overallScore ?? "未评估"}\n- 评估摘要：${item.generatedImage.latestEvaluation?.summary ?? "无"}`;
       return `### ${item.itemTypeLabel}：${item.itemId}\n\n素材不存在或已删除。`;
     }),
     "",

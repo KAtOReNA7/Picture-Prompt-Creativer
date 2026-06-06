@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
+import { CopyButton } from "@/components/ui/copy-button";
 import { ImageUploader, type UploadedImage } from "@/components/upload/image-uploader";
 
 type ReplaceableField = {
@@ -95,26 +96,6 @@ function DetailItem({ label, value }: { label: string; value: string | number })
   );
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }
-
-  return (
-    <button
-      type="button"
-      className="rounded-md border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-cyan-700 transition hover:bg-cyan-50"
-      onClick={() => void copy()}
-    >
-      {copied ? "已复制" : "一键复制"}
-    </button>
-  );
-}
-
 function AnalysisResultView({ result }: { result: ImageAnalysisResult }) {
   const detailItems = [
     ["模板标题", result.title],
@@ -179,7 +160,7 @@ function AnalysisResultView({ result }: { result: ImageAnalysisResult }) {
       <div className="mt-6 rounded-md border border-cyan-200 bg-cyan-50 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-cyan-950">英文 reverse prompt</h3>
-          <CopyButton text={result.reversePromptEnglish} />
+          <CopyButton text={result.reversePromptEnglish} label="复制 Prompt" />
         </div>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{result.reversePromptEnglish}</p>
       </div>
@@ -187,7 +168,7 @@ function AnalysisResultView({ result }: { result: ImageAnalysisResult }) {
       <div className="mt-6 rounded-md border border-rose-200 bg-rose-50 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-rose-950">英文 negative prompt</h3>
-          <CopyButton text={result.negativePromptEnglish} />
+          <CopyButton text={result.negativePromptEnglish} label="复制 Negative Prompt" />
         </div>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{result.negativePromptEnglish}</p>
       </div>
@@ -230,7 +211,7 @@ function SegmentationView({ segmentation }: { segmentation: SegmentationResult }
                 >
                   {segment.isReplaceable ? "可替换" : "建议保留"}
                 </span>
-                <CopyButton text={segment.content} />
+                <CopyButton text={segment.content} label="复制 Prompt" />
               </div>
             </div>
             <p className="mt-4 rounded-md bg-white p-3 text-sm leading-7 text-slate-700">{segment.content}</p>

@@ -171,7 +171,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
           <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-slate-950">英文 Reverse Prompt</h2>
-              {analysis.reversePrompt ? <CopyButton text={analysis.reversePrompt} /> : null}
+              {analysis.reversePrompt ? <CopyButton text={analysis.reversePrompt} label="复制 Prompt" /> : null}
             </div>
             <p className="mt-4 whitespace-pre-wrap rounded-md bg-cyan-50 p-4 text-sm leading-7 text-slate-700">
               {analysis.reversePrompt ?? "暂无 Reverse Prompt"}
@@ -193,7 +193,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
           <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-slate-950">英文 Negative Prompt</h2>
-              {analysis.negativePrompt ? <CopyButton text={analysis.negativePrompt} /> : null}
+              {analysis.negativePrompt ? <CopyButton text={analysis.negativePrompt} label="复制 Negative Prompt" /> : null}
             </div>
             <p className="mt-4 whitespace-pre-wrap rounded-md bg-rose-50 p-4 text-sm leading-7 text-slate-700">
               {analysis.negativePrompt ?? "暂无 Negative Prompt"}
@@ -255,7 +255,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                 <p className="mt-4 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-700">{segment.content}</p>
                 <p className="mt-3 text-sm leading-6 text-slate-600">替换建议：{segment.replaceHint ?? "暂无建议"}</p>
                 <div className="mt-3">
-                  <CopyButton text={segment.content} />
+                  <CopyButton text={segment.content} label="复制 Prompt" />
                 </div>
               </article>
             ))}
@@ -336,7 +336,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                 <div className="mt-4 rounded-md bg-cyan-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h4 className="text-sm font-semibold text-cyan-950">融合 Prompt</h4>
-                    <CopyButton text={fusion.fusedPrompt} />
+                    <CopyButton text={fusion.fusedPrompt} label="复制 Prompt" />
                   </div>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">{fusion.fusedPrompt}</p>
                   <div className="mt-4">
@@ -408,7 +408,7 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                   >
                     打开图片
                   </a>
-                  <CopyButton text={generatedFileUrl(image.id)} label="复制地址" />
+                  <CopyButton text={generatedFileUrl(image.id)} label="复制图片地址" />
                 </div>
                 <AddToCollectionPanel itemType="generated_image" itemId={image.id} collections={collections} compact />
               </article>
