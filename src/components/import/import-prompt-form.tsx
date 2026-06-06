@@ -185,9 +185,10 @@ export function ImportPromptForm() {
       }
 
       if (importMode === "semantic") {
-        completeProgress("Prompt 已整理并保存到库");
+        completeProgress(data.warnings.length > 0 ? "导入成功，但系统对英文 Prompt 做了自动修复。" : "Prompt 已整理并保存到库");
       }
-      router.push(`/library/${data.analysis.id}`);
+      const warningQuery = data.warnings.length > 0 ? "?importWarning=prompt-repaired" : "";
+      router.push(`/library/${data.analysis.id}${warningQuery}`);
     } catch {
       const message = "导入失败，请检查网络或稍后重试";
       setError(message);

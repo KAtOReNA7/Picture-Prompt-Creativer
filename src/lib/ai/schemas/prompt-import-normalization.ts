@@ -41,16 +41,23 @@ function assertString(value: unknown, field: string): string {
   return value.trim();
 }
 
-function looksEnglish(value: string): boolean {
-  const chineseCount = (value.match(/[\u3400-\u9fff]/g) ?? []).length;
-  const latinWords = (value.match(/[A-Za-z][A-Za-z'-]*/g) ?? []).length;
-  return chineseCount === 0 && latinWords >= 5;
+export function isEnglishImagePrompt(value: string): boolean {
+  const text = value.trim();
+  if (!text) return false;
+  if (/[\u3400-\u9fff]/.test(text)) return false;
+
+  const latinChars = (text.match(/[A-Za-z]/g) ?? []).length;
+  const nonSpaceChars = text.replace(/\s/g, "").length;
+  const latinWords = text.match(/[A-Za-z][A-Za-z'-]*/g) ?? [];
+
+  if (latinWords.length < 3) return false;
+  return nonSpaceChars > 0 && latinChars / nonSpaceChars >= 0.45;
 }
 
 function assertEnglish(value: unknown, field: string): string {
   const text = assertString(value, field);
 
-  if (!looksEnglish(text)) {
+  if (!isEnglishImagePrompt(text)) {
     throw new Error(`模型返回格式异常：${field} 必须是英文。`);
   }
 
@@ -84,7 +91,10 @@ function assertTags(value: unknown): string[] {
   return tags;
 }
 
-export function validatePromptImportNormalizationResult(value: unknown): PromptImportNormalizationResult {
+export function validatePromptImportNormalizationResult(
+  value: unknown,
+  options: { validateEnglish?: boolean } = {},
+): PromptImportNormalizationResult {
   if (!isRecord(value)) {
     throw new Error("模型返回格式异常：根节点必须是 JSON 对象。");
   }
@@ -100,8 +110,14 @@ export function validatePromptImportNormalizationResult(value: unknown): PromptI
     texture: assertString(value.texture, "texture"),
     eraFeeling: assertString(value.eraFeeling, "eraFeeling"),
     topicPotential: assertString(value.topicPotential, "topicPotential"),
-    reversePromptEnglish: assertEnglish(value.reversePromptEnglish, "reversePromptEnglish"),
-    negativePromptEnglish: assertEnglish(value.negativePromptEnglish, "negativePromptEnglish"),
+    reversePromptEnglish:
+      options.validateEnglish === false
+        ? assertString(value.reversePromptEnglish, "reversePromptEnglish")
+        : assertEnglish(value.reversePromptEnglish, "reversePromptEnglish"),
+    negativePromptEnglish:
+      options.validateEnglish === false
+        ? assertString(value.negativePromptEnglish, "negativePromptEnglish")
+        : assertEnglish(value.negativePromptEnglish, "negativePromptEnglish"),
     tags: assertTags(value.tags),
     normalizationNotes: assertString(value.normalizationNotes, "normalizationNotes"),
   };

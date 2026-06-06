@@ -148,3 +148,10 @@
 - 操作步骤：分别在 `/analyze` 执行图片分析和 Prompt 拆解，在 `/fusion` 执行风格迁移和生成测试图，在 `/generated-images/[id]` 执行生成图评估，在 `/import` 执行 AI 语义整理导入，在 `/prompt-variants/[id]` 执行 AI 润色和生成测试图。
 - 预期结果：操作开始后显示中文弹窗，包含操作名称、当前步骤、预估百分比和“此为预估进度”的说明；成功后进度到 100% 并显示已完成；失败后显示中文错误，页面按钮恢复可点击。
 - 失败排查：检查对应客户端组件是否渲染 `OperationProgressModal`，检查 hook 是否调用 `startProgress`、`completeProgress` 和 `failProgress`，确认错误信息没有英文堆栈或完整 API Key。
+
+## 22. 中文 Prompt 导入英文化修复
+
+- 前置条件：OPENAI_TEXT_MODEL 可用。
+- 操作步骤：打开 `/import`，选择“AI 语义整理导入”，输入“小红书封面图，一个穿红裙的女人站在雨夜街头，冷色电影感，强对比光影，悬疑小说氛围，标题区留在画面上方”。也可以再输入一个容易让模型输出中文说明的模糊 Prompt。
+- 预期结果：导入不会因为首次 `reversePromptEnglish` 中英混合而直接失败；最终 `reversePrompt` 和 `negativePrompt` 为英文；如果触发二次修复，页面显示“导入成功，但系统对英文 Prompt 做了自动修复。”；进入 `/library/[id]` 后能看到原始中文 Prompt、整理后的英文 Prompt 和英文化修复说明。
+- 失败排查：检查 `prompt-english-repair-prompt` 是否返回严格 JSON，检查 `rawJson.repair`，确认 direct 模式没有被强制英文化。

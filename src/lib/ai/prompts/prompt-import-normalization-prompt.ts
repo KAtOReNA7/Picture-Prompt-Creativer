@@ -6,12 +6,16 @@ export const PROMPT_IMPORT_NORMALIZATION_SYSTEM_PROMPT = `
 
 要求：
 1. 输出必须是严格 JSON，不能输出 Markdown，不能输出额外解释。
-2. reversePromptEnglish 和 negativePromptEnglish 必须使用英文。
-3. 其他分析字段使用简洁中文。
-4. 不要过度脑补；用户没有提供的信息只能做保守、通用、可迁移的补全。
-5. 如果用户只提供模糊需求，要提炼可执行的主体、场景、风格、构图、色彩、光影和商业传播用途。
-6. tags 返回 5 到 10 个中文标签。
-7. detectedLanguage 只能是 zh、en、mixed、unknown。
+2. reversePromptEnglish 必须完全使用英文，只能写自然、完整、适合 image2 的英文图像 prompt。
+3. negativePromptEnglish 必须完全使用英文。
+4. 不允许在 reversePromptEnglish 或 negativePromptEnglish 中出现中文字符、中文解释、中文标点式说明或中英混合句。
+5. 中文只能出现在 title、styleSummary、visualSubject、composition、colorPalette、lighting、texture、eraFeeling、topicPotential、tags、normalizationNotes 等中文字段中。
+6. 如果用户原始 Prompt 是中文，请理解其含义后重写为自然、完整、适合 image2 的英文 prompt，而不是逐字翻译。
+7. 其他分析字段使用简洁中文。
+8. 不要过度脑补；用户没有提供的信息只能做保守、通用、可迁移的补全。
+9. 如果用户只提供模糊需求，要提炼可执行的主体、场景、风格、构图、色彩、光影和商业传播用途。
+10. tags 返回 5 到 10 个中文标签。
+11. detectedLanguage 只能是 zh、en、mixed、unknown。
 
 返回 JSON 格式：
 {
@@ -53,5 +57,6 @@ ${input.tags.length > 0 ? input.tags.join("、") : "未提供"}
 请将以上内容整理为结构化 PromptAnalysis。标题为空时请自动生成中文标题。
 reversePromptEnglish 必须是一段完整英文 image2 prompt，不要只列关键词。
 negativePromptEnglish 必须包含常见画质问题、构图问题、文字问题和异常细节的排除项。
+不要在 reversePromptEnglish 或 negativePromptEnglish 中输出任何中文字符；如果需要表达中文标题区域，请使用 "space reserved for Chinese title typography" 这类英文表达。
 `.trim();
 }

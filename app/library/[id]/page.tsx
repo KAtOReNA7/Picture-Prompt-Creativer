@@ -15,6 +15,9 @@ type LibraryDetailPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams?: Promise<{
+    importWarning?: string;
+  }>;
 };
 
 function formatDate(date: Date | string): string {
@@ -81,8 +84,30 @@ function InfoBlock({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-export default async function LibraryDetailPage({ params }: LibraryDetailPageProps) {
+function parseImportRepairInfo(rawJson: string | null): { repairNotes?: string; warnings: string[] } {
+  if (!rawJson) return { warnings: [] };
+
+  try {
+    const parsed = JSON.parse(rawJson) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return { warnings: [] };
+    const record = parsed as { repairNotes?: unknown; repair?: { repairNotes?: unknown }; warnings?: unknown };
+    const warnings = Array.isArray(record.warnings) ? record.warnings.filter((item): item is string => typeof item === "string") : [];
+    const repairNotes =
+      typeof record.repairNotes === "string"
+        ? record.repairNotes
+        : typeof record.repair?.repairNotes === "string"
+          ? record.repair.repairNotes
+          : undefined;
+
+    return { repairNotes, warnings };
+  } catch {
+    return { warnings: [] };
+  }
+}
+
+export default async function LibraryDetailPage({ params, searchParams }: LibraryDetailPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const analysis = await prisma.promptAnalysis.findUnique({
     where: { id },
     include: {
@@ -138,6 +163,8 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
   const variantIds = new Set(analysis.variants.map((variant) => variant.id));
   const evaluationIds = new Set(sourceEvaluations.map((evaluation) => evaluation.id));
   const previewUrl = getPreviewUrl(analysis.image);
+  const importRepairInfo = parseImportRepairInfo(analysis.rawJson);
+  const showImportRepairWarning = resolvedSearchParams.importWarning === "prompt-repaired" || importRepairInfo.warnings.length > 0;
 
   return (
     <AppShell>
@@ -149,6 +176,12 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
         </div>
         <LibraryDetailActions analysisId={analysis.id} reversePrompt={analysis.reversePrompt} negativePrompt={analysis.negativePrompt} />
       </div>
+
+      {showImportRepairWarning ? (
+        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+          导入成功，但系统对英文 Prompt 做了自动修复。
+        </div>
+      ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -211,6 +244,21 @@ export default async function LibraryDetailPage({ params }: LibraryDetailPagePro
                 <p className="text-sm font-semibold text-cyan-950">AI 整理后的 reversePrompt</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{analysis.reversePrompt ?? "暂无"}</p>
               </div>
+              {importRepairInfo.repairNotes || importRepairInfo.warnings.length > 0 ? (
+                <div className="mt-4 rounded-md bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-950">英文化修复说明</p>
+                  {importRepairInfo.repairNotes ? (
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-amber-800">{importRepairInfo.repairNotes}</p>
+                  ) : null}
+                  {importRepairInfo.warnings.length > 0 ? (
+                    <ul className="mt-2 space-y-1 text-sm leading-6 text-amber-800">
+                      {importRepairInfo.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
             </section>
           ) : null}
 

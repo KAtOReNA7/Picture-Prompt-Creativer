@@ -616,3 +616,32 @@
 - `/library/[id]`：HTTP 200，生成图历史按 originAnalysisId 查询。
 - `/api/analyses`：generatedCount 已包含 originAnalysisId 归属生成图。
 - JSON 导出：成功，导出内容包含 `originAnalysisId` 和归属生成图。
+
+## 阶段 14D：导入 Prompt 英文化自动修复
+
+完成内容：
+
+- 强化 `prompt-import-normalization-prompt`，明确 `reversePromptEnglish` 和 `negativePromptEnglish` 必须完全使用英文，中文只能出现在中文结构化字段。
+- 新增 `src/lib/ai/prompts/prompt-english-repair-prompt.ts`，用于把中文、中英混合或不规范 prompt 修复为英文 image2 prompt。
+- 新增 `src/lib/ai/schemas/prompt-english-repair.ts`，校验 `repairedPromptEnglish` 和 `repairedNegativePromptEnglish`。
+- 优化 `src/lib/ai/schemas/prompt-import-normalization.ts` 的英文检测，允许常见图像 prompt 的数字、标点、括号和 “Chinese typography” 等英文表达，但拒绝明显中文字符或英文比例过低的内容。
+- 改造 `prompt-import-service`：语义导入先校验结构，再单独检测英文；首次返回非英文时自动调用英文化修复，修复成功后再保存。
+- `rawJson` 保留首次 normalization、最终 normalization、repair、repairNotes 和 warnings。
+- `/api/prompts/import` 成功返回自动修复 warnings。
+- `/import` 语义导入修复成功时显示“导入成功，但系统对英文 Prompt 做了自动修复。”并跳转详情页。
+- `/library/[id]` 导入来源区域显示英文化修复说明和 repairNotes。
+- 更新 `docs/prompt-library.md` 和 `docs/acceptance-test.md`。
+
+验证结果：
+
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听
+- `npm run lint`：成功
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning
+
+页面与接口测试：
+
+- `/api/prompts/import` 中文模糊 Prompt 语义导入：成功，最终 `reversePrompt` 和 `negativePrompt` 均为英文。本次模型首次返回已合规，未触发自动修复 warning。
+- `/api/prompts/segment`：对导入记录拆解成功，生成 11 个模块。
+- `/api/prompts/import` 英文 Prompt 语义导入：成功，未被错误修复。
+- `/api/prompts/import` direct 中文导入：成功，仍原样保存中文 Prompt，并返回 direct 模式 warning。
+- `/library/[id]`：HTTP 200，显示原始导入 Prompt 和 AI 整理后的 reversePrompt。

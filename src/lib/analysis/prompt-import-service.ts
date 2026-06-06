@@ -8,13 +8,16 @@ import {
   PROMPT_IMPORT_NORMALIZATION_SYSTEM_PROMPT,
   buildPromptImportNormalizationUserPrompt,
 } from "@/lib/ai/prompts/prompt-import-normalization-prompt";
+import { PROMPT_ENGLISH_REPAIR_SYSTEM_PROMPT, buildPromptEnglishRepairUserPrompt } from "@/lib/ai/prompts/prompt-english-repair-prompt";
 import {
   detectPromptLanguage,
+  isEnglishImagePrompt,
   validatePromptImportNormalizationResult,
   type PromptImportMode,
   type PromptImportNormalizationInput,
   type PromptImportNormalizationResult,
 } from "@/lib/ai/schemas/prompt-import-normalization";
+import { validatePromptEnglishRepairResult, type PromptEnglishRepairResult } from "@/lib/ai/schemas/prompt-english-repair";
 import { appLog } from "@/lib/logging/app-logger";
 
 type NormalizePromptImportOutput = {
@@ -95,6 +98,66 @@ async function requestNormalizationJson(input: PromptImportNormalizationInput): 
   return rawContent;
 }
 
+async function requestEnglishRepairJson(input: {
+  rawPrompt: string;
+  normalization: PromptImportNormalizationResult;
+}): Promise<string> {
+  const config = requireAiConfig();
+  const client = getOpenAIClient();
+  let rawContent = "";
+
+  try {
+    const stream = await client.chat.completions.create({
+      model: config.textModel,
+      temperature: 0.15,
+      response_format: { type: "json_object" },
+      stream: true,
+      messages: [
+        {
+          role: "system",
+          content: PROMPT_ENGLISH_REPAIR_SYSTEM_PROMPT,
+        },
+        {
+          role: "user",
+          content: buildPromptEnglishRepairUserPrompt({
+            rawPrompt: input.rawPrompt,
+            reversePromptEnglish: input.normalization.reversePromptEnglish,
+            negativePromptEnglish: input.normalization.negativePromptEnglish,
+            title: input.normalization.title,
+            styleSummary: input.normalization.styleSummary,
+            visualSubject: input.normalization.visualSubject,
+            composition: input.normalization.composition,
+            colorPalette: input.normalization.colorPalette,
+            lighting: input.normalization.lighting,
+            texture: input.normalization.texture,
+            eraFeeling: input.normalization.eraFeeling,
+            topicPotential: input.normalization.topicPotential,
+          }),
+        },
+      ],
+    });
+
+    for await (const chunk of stream) {
+      rawContent += chunk.choices?.[0]?.delta?.content ?? "";
+    }
+  } catch (error) {
+    const parsed = parseAiError(error);
+    await appLog({
+      level: "error",
+      scope: "prompt-import-repair",
+      message: "Prompt 英文化修复失败",
+      safeDetail: parsed,
+    });
+    throw new Error(parsed.message);
+  }
+
+  if (!rawContent.trim()) {
+    throw new Error("Prompt 英文化修复失败：模型返回内容为空。");
+  }
+
+  return rawContent;
+}
+
 async function assertImageExists(imageId: string | undefined): Promise<string | undefined> {
   if (!imageId) return undefined;
 
@@ -130,6 +193,72 @@ async function bindTags(analysisId: string, tagNames: string[]) {
 
 function normalizeImportMode(value: PromptImportMode): PromptImportMode {
   return value === "direct" ? "direct" : "semantic";
+}
+
+async function repairNormalizationIfNeeded(input: {
+  rawPrompt: string;
+  normalization: PromptImportNormalizationResult;
+}): Promise<{
+  normalization: PromptImportNormalizationResult;
+  repair: PromptEnglishRepairResult | null;
+  warnings: string[];
+}> {
+  const needsRepair =
+    !isEnglishImagePrompt(input.normalization.reversePromptEnglish) ||
+    !isEnglishImagePrompt(input.normalization.negativePromptEnglish);
+
+  if (!needsRepair) {
+    return {
+      normalization: input.normalization,
+      repair: null,
+      warnings: [],
+    };
+  }
+
+  const rawRepairContent = await requestEnglishRepairJson(input);
+  const parsedRepair = parseModelJson(rawRepairContent);
+
+  if (!parsedRepair.ok) {
+    await appLog({
+      level: "error",
+      scope: "prompt-import-repair",
+      message: "Prompt 英文化修复返回非 JSON",
+      safeDetail: parsedRepair.detail ?? parsedRepair.error,
+    });
+    throw new Error("AI 已尝试整理 Prompt，但英文 Prompt 仍未通过校验。请简化原始描述后重试。");
+  }
+
+  let repair: PromptEnglishRepairResult;
+  try {
+    repair = validatePromptEnglishRepairResult(parsedRepair.value);
+  } catch (error) {
+    await appLog({
+      level: "error",
+      scope: "prompt-import-repair",
+      message: "Prompt 英文化修复校验失败",
+      safeDetail: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error("AI 已尝试整理 Prompt，但英文 Prompt 仍未通过校验。请简化原始描述后重试。");
+  }
+
+  const repairedNormalization = {
+    ...input.normalization,
+    reversePromptEnglish: repair.repairedPromptEnglish,
+    negativePromptEnglish: repair.repairedNegativePromptEnglish || input.normalization.negativePromptEnglish,
+  };
+
+  if (
+    !isEnglishImagePrompt(repairedNormalization.reversePromptEnglish) ||
+    !isEnglishImagePrompt(repairedNormalization.negativePromptEnglish)
+  ) {
+    throw new Error("AI 已尝试整理 Prompt，但英文 Prompt 仍未通过校验。请简化原始描述后重试。");
+  }
+
+  return {
+    normalization: repairedNormalization,
+    repair,
+    warnings: ["AI 首次返回的 reverse prompt 含有中文，系统已自动修复为英文。"],
+  };
 }
 
 export async function normalizePromptImport(input: PromptImportNormalizationInput): Promise<NormalizePromptImportOutput> {
@@ -194,7 +323,12 @@ export async function normalizePromptImport(input: PromptImportNormalizationInpu
     throw new Error(parsedJson.detail ? `${parsedJson.error} ${parsedJson.detail}` : parsedJson.error);
   }
 
-  const normalization = validatePromptImportNormalizationResult(parsedJson.value);
+  const initialNormalization = validatePromptImportNormalizationResult(parsedJson.value, { validateEnglish: false });
+  const repairResult = await repairNormalizationIfNeeded({
+    rawPrompt,
+    normalization: initialNormalization,
+  });
+  const normalization = repairResult.normalization;
   const detectedLanguage =
     normalization.detectedLanguage === "unknown"
       ? detectPromptLanguage([rawPrompt, negativePrompt].filter(Boolean).join("\n"))
@@ -220,10 +354,17 @@ export async function normalizePromptImport(input: PromptImportNormalizationInpu
       rawJson: JSON.stringify({
         source: "prompt_import",
         importMode: "semantic",
+        initialNormalization: {
+          ...initialNormalization,
+          detectedLanguage,
+        },
         normalization: {
           ...normalization,
           detectedLanguage,
         },
+        repair: repairResult.repair,
+        repairNotes: repairResult.repair?.repairNotes,
+        warnings: repairResult.warnings,
       }),
     },
   });
@@ -236,6 +377,6 @@ export async function normalizePromptImport(input: PromptImportNormalizationInpu
       ...normalization,
       detectedLanguage,
     },
-    warnings: [],
+    warnings: repairResult.warnings,
   };
 }

@@ -77,6 +77,8 @@
 - `semantic`：AI 语义整理导入，默认模式。系统会识别中文、英文或中英混合内容，生成中文结构化分析，并把 `reversePrompt` / `negativePrompt` 整理为英文，适合后续拆解、风格迁移和生成测试图。
 - `direct`：直接导入。不调用 AI，不拒绝中文 Prompt，适合先归档。该模式不会自动转英文，后续用于生成图前建议重新使用 AI 语义整理。
 
+中文 / 模糊 Prompt 导入时，系统会尽量自动英文化 `reversePrompt` 和 `negativePrompt`。如果模型首次返回了中英混合或包含中文字符的 `reversePromptEnglish`，系统会自动进行一次二次英文化修复，并在导入详情页显示修复说明。直接导入模式不会强制英文化，会原样保存用户输入。
+
 请求体：
 
 ```json
@@ -108,6 +110,7 @@
 - `importMode`：记录导入模式，可能是 `semantic` 或 `direct`。
 - `reversePrompt`：语义整理模式下保存 AI 整理后的英文 image2 prompt；直接导入模式下保存原始 Prompt。
 - `negativePrompt`：语义整理模式下保存英文 negative prompt；直接导入模式下保存用户原文。
+- `rawJson.repair` / `rawJson.repairNotes`：如果语义整理阶段触发二次英文化修复，会记录修复结果和中文说明。
 
 导入后的 Prompt 可以继续执行：
 
@@ -119,5 +122,6 @@
 - `请填写原始 Prompt 或画面描述`：rawPrompt 为空。
 - `关联的参考图片不存在`：传入的 imageId 无效。
 - `AI 语义整理失败`：OPENAI_TEXT_MODEL 调用失败或模型返回为空。
-- `模型返回格式异常`：模型没有返回严格 JSON，或 reversePromptEnglish / negativePromptEnglish 不是英文。
+- `模型返回格式异常`：模型没有返回严格 JSON，或字段不完整。
+- `AI 已尝试整理 Prompt，但英文 Prompt 仍未通过校验`：系统已经进行二次英文化修复，但结果仍包含中文或英文比例过低。请简化原始描述后重试。
 - `未找到该 Prompt 分析记录`：详情或删除接口中的 id 不存在。
