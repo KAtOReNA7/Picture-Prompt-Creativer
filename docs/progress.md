@@ -741,3 +741,13 @@
 - `POST /api/batch-analyses/[id]/process-next` 失败路径：使用极小测试 PNG 时单项失败，错误记录到 item，不影响其他 pending 项继续处理。
 - 失败项重试：`POST /api/batch-analyses/[id]/items/[itemId]/retry` 成功将 failed item 改回 `pending`；再次处理失败时接口顶层仍为 `ok=true`，单项结果为 `itemOk=false`，不会中断队列。
 - `/analyze`：HTTP 200，单图分析页面可访问，现有单图流程未改动。
+
+## 版本检查点：v0.6.0-batch-analysis
+
+- 检查日期：2026-06-07。
+- 检查前 `git status --short`：工作区干净。
+- 创建 tag：`v0.6.0-batch-analysis`。
+- tag 说明：`v0.6.0: batch image reverse prompt analysis workflow`。
+- 推送结果：`git push origin v0.6.0-batch-analysis` 成功。
+- tag 确认：`git tag --list` 已显示 `v0.6.0-batch-analysis`。
+- 该检查点对应阶段 15：批量图片逆向 Prompt 分析工作流。
