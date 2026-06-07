@@ -29,11 +29,11 @@ export async function POST(request: Request, context: RouteContext) {
 
     const tags = [];
     for (const name of names) {
-      const tag = await prisma.tag.upsert({
-        where: { name },
-        update: {},
-        create: { name },
-      });
+      const existing = await prisma.tag.findUnique({ where: { name } });
+      if (existing?.isArchived) {
+        throw new Error(`标签“${name}”已归档，可能已有同类标签。请在标签管理页确认后再添加。`);
+      }
+      const tag = existing ?? (await prisma.tag.create({ data: { name, normalizedName: name.trim().replace(/\s+/g, "").toLowerCase() } }));
       tags.push(tag);
     }
 
@@ -58,6 +58,7 @@ export async function POST(request: Request, context: RouteContext) {
         name: item.tag.name,
         color: item.tag.color,
         description: item.tag.description,
+        category: item.tag.category,
       })),
     });
   } catch (error) {

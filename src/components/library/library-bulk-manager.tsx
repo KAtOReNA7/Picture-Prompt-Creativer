@@ -8,6 +8,7 @@ type TagItem = {
   id: string;
   name: string;
   color: string | null;
+  category?: string | null;
 };
 
 type CollectionItem = {
@@ -311,7 +312,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
               {analysis.tags.length > 0 ? (
                 analysis.tags.map((tag) => (
                   <span key={tag.id} className="rounded-md px-2 py-1 text-xs font-medium text-slate-700" style={{ backgroundColor: tag.color ?? "#e0f2fe" }}>
-                    {tag.name}
+                    {tag.category ? `${tag.category} / ${tag.name}` : tag.name}
                   </span>
                 ))
               ) : (

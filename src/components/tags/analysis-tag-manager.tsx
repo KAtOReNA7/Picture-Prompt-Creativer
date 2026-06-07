@@ -10,6 +10,7 @@ type TagItem = {
   name: string;
   color: string | null;
   description?: string | null;
+  category?: string | null;
 };
 
 type SuggestedTag = {
@@ -34,6 +35,12 @@ export function AnalysisTagManager({ analysisId, initialTags, allTags }: Analysi
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { progress, startProgress, completeProgress, failProgress, hideProgress } = useOperationProgress();
+  const groupedTags = allTags.reduce<Record<string, TagItem[]>>((groups, tag) => {
+    const key = tag.category ?? "未分类";
+    groups[key] = groups[key] ?? [];
+    groups[key].push(tag);
+    return groups;
+  }, {});
 
   async function updateTagIds(tagIds: string[]) {
     const response = await fetch(`/api/analyses/${analysisId}/tags`, {
@@ -182,6 +189,7 @@ export function AnalysisTagManager({ analysisId, initialTags, allTags }: Analysi
           tags.map((tag) => (
             <span key={tag.id} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-800" style={{ backgroundColor: tag.color ?? "#e0f2fe" }}>
               {tag.name}
+              {tag.category ? <span className="rounded-md bg-white/70 px-2 py-1 text-xs text-slate-600">{tag.category}</span> : null}
               <button type="button" onClick={() => removeTag(tag.id)} className="text-xs text-slate-600 hover:text-rose-700">
                 移除
               </button>
@@ -195,10 +203,14 @@ export function AnalysisTagManager({ analysisId, initialTags, allTags }: Analysi
       <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
         <select value={selectedTagId} onChange={(event) => setSelectedTagId(event.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
           <option value="">选择已有标签</option>
-          {allTags.map((tag) => (
-            <option key={tag.id} value={tag.id}>
-              {tag.name}
-            </option>
+          {Object.entries(groupedTags).map(([category, categoryTags]) => (
+            <optgroup key={category} label={category}>
+              {categoryTags.map((tag) => (
+                <option key={tag.id} value={tag.id}>
+                  {tag.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <button type="button" disabled={isLoading} onClick={addExisting} className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">

@@ -176,3 +176,26 @@
 - 操作步骤：上传该图片并调用 `process-next`，观察 item 失败状态。
 - 预期结果：`item.errorMessage` 不再是“未知 AI 错误”；页面显示中文“失败原因”和“建议操作”；如果属于图片过小或不可识别，显示“建议更换更清晰或更大尺寸图片。重试可能仍会失败。”；失败不影响其他 item；重试按钮仍可用。
 - 失败排查：检查 `src/lib/ai/errors.ts`、`src/lib/analysis/image-analysis-service.ts` 和批量页面失败提示逻辑。
+
+## 26. 标签治理与合并
+
+- 前置条件：Prompt 库中存在多个近义标签，例如“冷色电影感”“冷色调电影”“蓝绿色电影感”，且这些标签已绑定不同 PromptAnalysis。
+- 操作步骤：打开 `/tags`，确认标签统计、分类和等级显示正常。
+- 预期结果：页面显示全部标签、活跃标签、已归档标签和未分类标签统计。
+- 失败排查：检查 `GET /api/tags/stats` 和 Tag 迁移字段。
+
+- 操作步骤：点击“AI 标签治理”。
+- 预期结果：页面只显示合并、分类、层级建议，不自动修改数据库。
+- 失败排查：检查 `OPENAI_TEXT_MODEL`、`POST /api/tags/suggest-governance` 和模型 JSON 返回。
+
+- 操作步骤：选择一组合并建议，点击“人工确认合并”。
+- 预期结果：source tags 被归档，`mergedIntoId` 指向目标标签，`PromptAnalysisTag` 关联迁移到 target tag，`TagAlias` 创建成功。
+- 失败排查：检查 `POST /api/tags/merge` 的去重迁移逻辑和 `@@unique([analysisId, tagId])`。
+
+- 操作步骤：打开 `/library?tagId=目标标签 id`。
+- 预期结果：能够找到原来多个近义标签下的 Prompt 图片。
+- 失败排查：检查关联是否迁移、归档标签是否仍被错误筛选。
+
+- 操作步骤：打开 `/library/[id]` 的标签管理区。
+- 预期结果：已绑定标签显示分类；新增标签下拉按分类分组，并默认不显示已归档标签。
+- 失败排查：检查详情页 `allTags` 查询条件和 `AnalysisTagManager`。

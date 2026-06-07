@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { normalizeTagName, validateTagCategory, validateTagLevel } from "@/lib/tags/tag-governance";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -8,6 +9,9 @@ type TagBody = {
   name?: unknown;
   color?: unknown;
   description?: unknown;
+  category?: unknown;
+  level?: unknown;
+  parentId?: unknown;
 };
 
 function optionalString(value: unknown): string | undefined {
@@ -31,10 +35,15 @@ export async function PATCH(request: Request, context: RouteContext) {
       where: { id },
       data: {
         ...(name !== undefined ? { name } : {}),
+        ...(name !== undefined ? { normalizedName: normalizeTagName(name) } : {}),
         ...(body.color !== undefined ? { color: optionalString(body.color) ?? null } : {}),
         ...(body.description !== undefined ? { description: optionalString(body.description) ?? null } : {}),
+        ...(body.category !== undefined ? { category: validateTagCategory(optionalString(body.category) ?? null) } : {}),
+        ...(body.level !== undefined ? { level: validateTagLevel(body.level) } : {}),
+        ...(body.parentId !== undefined ? { parentId: optionalString(body.parentId) ?? null } : {}),
       },
       include: {
+        aliases: true,
         _count: { select: { analyses: true } },
       },
     });
@@ -46,7 +55,14 @@ export async function PATCH(request: Request, context: RouteContext) {
         name: tag.name,
         color: tag.color,
         description: tag.description,
+        category: tag.category,
+        level: tag.level,
+        parentId: tag.parentId,
+        normalizedName: tag.normalizedName,
+        isArchived: tag.isArchived,
+        aliases: tag.aliases.map((alias) => alias.alias),
         createdAt: tag.createdAt.toISOString(),
+        updatedAt: tag.updatedAt.toISOString(),
         analysisCount: tag._count.analyses,
       },
     });

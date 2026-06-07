@@ -174,12 +174,32 @@ model GeneratedImageEvaluation {
 }
 
 model Tag {
-  id          String              @id @default(cuid())
-  name        String              @unique
-  color       String?
-  description String?
-  createdAt   DateTime            @default(now())
-  analyses    PromptAnalysisTag[]
+  id             String              @id @default(cuid())
+  name           String              @unique
+  color          String?
+  description    String?
+  category       String?
+  level          Int                 @default(1)
+  parentId       String?
+  parent         Tag?                @relation("TagHierarchy", fields: [parentId], references: [id])
+  children       Tag[]               @relation("TagHierarchy")
+  normalizedName String?
+  isArchived     Boolean             @default(false)
+  mergedIntoId   String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @default(now()) @updatedAt
+  analyses       PromptAnalysisTag[]
+  aliases        TagAlias[]
+}
+
+model TagAlias {
+  id        String   @id @default(cuid())
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  alias     String
+  createdAt DateTime @default(now())
+
+  @@unique([tagId, alias])
 }
 
 model PromptAnalysisTag {

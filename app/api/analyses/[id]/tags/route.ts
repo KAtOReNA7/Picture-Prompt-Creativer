@@ -50,6 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
         name: item.tag.name,
         color: item.tag.color,
         description: item.tag.description,
+        category: item.tag.category,
       })),
     });
   } catch (error) {

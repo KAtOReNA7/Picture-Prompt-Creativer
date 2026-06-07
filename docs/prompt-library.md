@@ -164,6 +164,31 @@
 - 重新拆解 Prompt：`POST /api/prompts/segment`
 - 风格迁移：`POST /api/prompts/fuse`
 
+## 批量删除
+
+`/library` 支持多选 PromptAnalysis 后批量删除。
+
+删除范围：
+
+- 删除选中的 PromptAnalysis。
+- 删除其下属 PromptSegment、PromptFusion、PromptVariant、PromptAnalysisTag。
+- 清理合集中的 `analysis` 和 `prompt_variant` 弱引用。
+
+不会删除：
+
+- ImageAsset。
+- 原始上传图片文件。
+- GeneratedImage。
+- 生成图片文件。
+
+如果删除后需要检查本地孤儿文件，可打开 `/maintenance` 使用孤儿文件检查。
+
+## 标签治理
+
+Prompt 库标签筛选默认只显示未归档标签，并按分类分组。可在 `/tags` 页面查看标签统计、分类、等级、使用次数和别名数量。
+
+标签合并必须人工确认。AI 只会提出建议，不会自动合并标签。确认合并后，系统会把 source tags 关联的 PromptAnalysis 迁移到 target tag，并把 source tags 归档为历史标签。
+
 ## 常见错误
 
 - `请填写原始 Prompt 或画面描述`：rawPrompt 为空。

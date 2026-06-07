@@ -775,3 +775,36 @@
 - `/batch-analyze/[id]`：HTTP 200，页面包含“失败原因”/“建议操作”展示。
 - 失败项重试：成功将 item 改回 `pending`。
 - `/analyze`：HTTP 200，单图分析页面可访问，现有单图流程未改动。
+
+## 阶段 16A：标签治理系统
+
+完成内容：
+
+- Prisma 扩展 `Tag`，新增 `category`、`level`、`parentId`、`normalizedName`、`isArchived`、`mergedIntoId`、`updatedAt` 和父子层级关系。
+- 新增 `TagAlias` 模型，用于记录合并后的历史别名。
+- 新增标签治理工具 `src/lib/tags/tag-governance.ts`，统一分类、等级和规范名校验。
+- 新增 `GET /api/tags/stats`，支持标签统计、分类统计、使用次数统计，以及 `category`、`level`、`q`、`includeArchived` 筛选。
+- 新增 `POST /api/tags/suggest-governance`，调用 `OPENAI_TEXT_MODEL` 只返回合并、分类和层级建议，不自动执行。
+- 新增 `POST /api/tags/merge`，在用户人工确认后迁移 `PromptAnalysisTag` 关联、归档 source tags，并创建 `TagAlias`。
+- 新增 `PATCH /api/tags/[id]/governance`，支持更新分类、等级、父级、规范名和归档状态。
+- 新增 `/tags` 标签治理页面，显示统计、分类筛选、AI 治理建议、人工确认合并、分类等级编辑和查看图片入口。
+- `/library` 标签筛选升级为按分类分组，默认隐藏已归档标签，并显示当前筛选标签名称。
+- `/library/[id]` 标签管理默认只显示未归档标签，下拉按分类分组，已绑定标签显示分类。
+- 新增 `docs/tag-governance.md`，并更新 API 回归清单和验收测试文档。
+
+验证结果：
+
+- `npx prisma generate`：成功。
+- `npx prisma migrate dev --name tag_governance`：首次未设置 `DATABASE_URL` 失败；设置 `DATABASE_URL=file:./dev.db` 后成功，生成并应用 `20260607075111_tag_governance`。
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听。
+- `npm run lint`：成功。
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning。
+
+页面与接口测试：
+
+- `/tags`：HTTP 200。
+- `GET /api/tags/stats`：成功，返回当前标签总数、活跃标签、已归档标签、未分类标签和使用次数。
+- 创建 2 个测试近义标签并绑定到 1 条 PromptAnalysis：成功。
+- `POST /api/tags/merge`：成功，`movedRelationsCount=1`、`archivedTagsCount=2`，target tag 创建别名。
+- `/library?tagId=targetTagId`：HTTP 200，可用合并后的 target tag 筛选。
+- `POST /api/tags/suggest-governance`：成功返回 AI 建议，包含合并建议、分类建议；只返回建议，没有自动修改数据库。

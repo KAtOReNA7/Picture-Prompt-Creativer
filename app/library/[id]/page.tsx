@@ -132,7 +132,10 @@ export default async function LibraryDetailPage({ params, searchParams }: Librar
     notFound();
   }
 
-  const allTags = await prisma.tag.findMany({ orderBy: { createdAt: "desc" } });
+  const allTags = await prisma.tag.findMany({
+    where: { isArchived: false },
+    orderBy: [{ category: "asc" }, { name: "asc" }],
+  });
   const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
   const generatedImages = await prisma.generatedImage.findMany({
     where: await generatedImageWhereForAnalysis(analysis.id),
@@ -307,12 +310,14 @@ export default async function LibraryDetailPage({ params, searchParams }: Librar
           name: item.tag.name,
           color: item.tag.color,
           description: item.tag.description,
+          category: item.tag.category,
         }))}
         allTags={allTags.map((tag) => ({
           id: tag.id,
           name: tag.name,
           color: tag.color,
           description: tag.description,
+          category: tag.category,
         }))}
       />
 
