@@ -850,3 +850,46 @@
 - 推送结果：`git push origin v0.7.0-library-governance` 成功。
 - tag 确认：`git tag --list` 已显示 `v0.7.0-library-governance`。
 - 该检查点对应阶段 16A 和阶段 16B：标签治理系统、标签归档合并、AI 标签整理建议、Prompt 库服务端分页和高密度列表。
+
+## 阶段 16C：自动标签治理与标签页性能优化
+
+完成内容：
+
+- 新增 `TagGovernanceRun` 模型，用于记录自动标签治理计划、执行结果和错误信息。
+- 新增自动治理 Prompt：`src/lib/ai/prompts/tag-auto-governance-prompt.ts`。
+- 新增自动治理结构校验：`src/lib/ai/schemas/tag-auto-governance.ts`。
+- 新增自动治理服务：`src/lib/tags/tag-auto-governance-service.ts`，只处理 active 且未分类标签。
+- 新增 `POST /api/tags/auto-governance`，支持将未分类标签自动治理到最多 50 个目标标签。
+- 新增 `GET /api/tags/governance-runs` 和 `GET /api/tags/governance-runs/[id]`。
+- 新增 `GET /api/tags/options` 轻量标签选项接口。
+- 优化 `GET /api/tags/stats`，支持分页、`view=summary`、`pageSize<=200`，默认不再返回全部标签。
+- 重构 `/tags` 页面，默认只加载第一页 100 个标签，增加自动治理全局确认、治理结果展示和治理记录入口。
+- `/library` 标签筛选只加载 active 高频标签前 200 个，`/library/[id]` 标签管理只加载 active 高频标签前 300 个。
+- 更新 `docs/tag-governance.md`、`docs/api-regression.md` 和 `docs/acceptance-test.md`。
+
+验证结果：
+
+- `npx prisma generate`：成功。
+- `npx prisma migrate dev --name auto_tag_governance`：成功，生成并应用 `20260607090709_auto_tag_governance`。
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听。
+- `npm run lint`：成功。
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning。
+
+页面与接口测试：
+
+- `/tags`：HTTP 200。
+- `GET /api/tags/stats?page=1&pageSize=100`：成功，默认只返回 100 个标签。
+- `GET /api/tags/stats?view=summary`：成功，只返回 summary 和 categories。
+- `GET /api/tags/options?limit=20`：成功，返回 20 个轻量标签选项。
+- `GET /api/tags/governance-runs`：成功。
+- `GET /api/tags/governance-runs/[id]`：成功，返回 `rawPlanJson` 和 `resultJson`。
+- `POST /api/tags/auto-governance`：成功完成自动治理，`sourceTagCount=893`、`targetTagCount=50`、`archivedTagCount=843`、`movedRelationsCount=674`、`unmappedCount=0`。
+- 治理后统计：active 未分类标签数从 893 降为 0；active 标签数为 54；归档标签数为 847。
+- `TagAlias`：已创建，抽样目标标签包含 8 个别名。
+- `/library?tagId=目标标签`：HTTP 200，可使用合并后的目标标签筛选图片。
+
+可靠性修复：
+
+- 首次自动治理实测中，893 个标签直接交给模型导致客户端超时且 run 停留在 `running`。
+- 已增加治理超时保护和本地兜底计划：AI 优先处理高频标签；若 AI 超时或返回不可用，系统按高频标签自动归并，保证最多 50 个目标标签并完整迁移关联。
+- 新治理启动时会把超过 10 分钟仍 running 的旧 run 标记为 failed，避免长期卡住。

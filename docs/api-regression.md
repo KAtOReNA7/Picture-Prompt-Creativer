@@ -29,10 +29,14 @@
 | POST | `/api/tags` | 创建标签 | `name` | tag | 名称为空、重名 | 否 | 否 | 是 |
 | PATCH | `/api/tags/[id]` | 更新标签 | id | tag | 标签不存在、重名 | 否 | 否 | 是 |
 | DELETE | `/api/tags/[id]` | 删除标签 | id | 删除成功 | 标签不存在 | 否 | 否 | 是 |
-| GET | `/api/tags/stats` | 标签统计与治理列表 | 可选 `category`,`level`,`q`,`includeArchived` | summary、categories、tags | 查询失败 | 否 | 否 | 否 |
+| GET | `/api/tags/stats` | 标签统计与治理分页列表 | 可选 `page`,`pageSize<=200`,`view=summary`,`category`,`level`,`q`,`includeArchived` | summary、categories、items、pagination；兼容 tags | 查询失败 | 否 | 否 | 否 |
 | POST | `/api/tags/suggest-governance` | AI 标签治理建议 | `mode=merge_and_classify` | mergeGroups、classifications、hierarchy | AI 失败、返回格式异常 | 是 | 否 | 否 |
 | POST | `/api/tags/merge` | 人工确认合并标签 | `sourceTagIds`；`targetTagId` 或 `targetName` | targetTag、迁移数量、归档数量 | source 为空、标签不存在、重复目标 | 否 | 否 | 是 |
 | PATCH | `/api/tags/[id]/governance` | 更新标签分类、等级、父级、归档 | id，可选治理字段 | tag | 分类非法、等级非法、父级等于自身 | 否 | 否 | 是 |
+| POST | `/api/tags/auto-governance` | AI 自动治理未分类标签 | `scope=uncategorized`,`targetMaxTags<=50` | run、summary | AI 失败、计划异常、迁移失败 | 是 | 否 | 是 |
+| GET | `/api/tags/governance-runs` | 最近标签治理记录 | 无 | runs | 无 | 否 | 否 | 否 |
+| GET | `/api/tags/governance-runs/[id]` | 标签治理记录详情 | id | run、rawPlanJson、resultJson | 记录不存在 | 否 | 否 | 否 |
+| GET | `/api/tags/options` | 轻量标签选项 | 可选 `q`,`category`,`limit` | options | 无 | 否 | 否 | 否 |
 | POST | `/api/prompt-variants/compose` | 组合 PromptVariant | `analysisId`,`title`,`editedSegments` | PromptVariant | 模块不足、analysis 不存在 | 否 | 否 | 是 |
 | GET | `/api/prompt-variants` | 模板版本列表 | 可选 `analysisId` | variants | 无 | 否 | 否 | 否 |
 | GET | `/api/prompt-variants/[id]` | 模板版本详情 | id | variant + generatedImages | 版本不存在 | 否 | 否 | 否 |

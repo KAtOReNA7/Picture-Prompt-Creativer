@@ -202,6 +202,23 @@ model TagAlias {
   @@unique([tagId, alias])
 }
 
+model TagGovernanceRun {
+  id                  String    @id @default(cuid())
+  mode                String
+  status              String
+  sourceTagCount      Int
+  targetTagCount      Int?
+  archivedTagCount    Int       @default(0)
+  movedRelationsCount Int       @default(0)
+  failedCount         Int       @default(0)
+  errorMessage        String?
+  rawPlanJson         String?
+  resultJson          String?
+  createdAt           DateTime  @default(now())
+  startedAt           DateTime?
+  finishedAt          DateTime?
+}
+
 model PromptAnalysisTag {
   id         String         @id @default(cuid())
   analysisId String

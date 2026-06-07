@@ -234,3 +234,34 @@
 - 操作步骤：单条点击“删除”，确认删除。
 - 预期结果：该记录从当前页移除；原始图片和生成图保留；如果当前页删空且 page > 1，自动回上一页。
 - 失败排查：检查 `/api/analyses/batch-delete` 和单条删除确认逻辑。
+
+## 28. 自动标签治理
+
+- 前置条件：存在多个 active 且未分类标签，建议先在 `/maintenance` 创建备份。
+- 操作步骤：打开 `/tags`。
+- 预期结果：页面默认只加载第一页标签，不一次性渲染全部标签；统计区显示未分类标签数量；标签列表有分页。
+- 失败排查：检查 `GET /api/tags/stats?page=1&pageSize=100`。
+
+- 操作步骤：搜索标签、筛选“未分类”、切换显示已归档。
+- 预期结果：筛选正常，页面不卡顿。
+- 失败排查：检查 `/api/tags/stats` 的 `q`、`category`、`includeArchived` 参数。
+
+- 操作步骤：点击“AI 自动治理未分类标签”。
+- 预期结果：弹出全局确认，文案说明会自动合并未分类标签、旧标签只归档并作为别名保留，并提示建议先备份。
+- 失败排查：检查 `TagGovernanceDashboard` 确认弹窗。
+
+- 操作步骤：确认开始治理。
+- 预期结果：创建 `TagGovernanceRun`；治理完成后显示原标签数、目标标签数、归档标签数、迁移关联数、未归并数量；`targetTagCount <= 50`。
+- 失败排查：检查 `POST /api/tags/auto-governance`、AI 返回 JSON 和 `tag-auto-governance-service`。
+
+- 操作步骤：检查数据库。
+- 预期结果：source tags 变为 `isArchived=true`；不删除 Tag；`TagAlias` 被创建；`PromptAnalysisTag` 关联迁移到目标标签；未分类 active 标签显著减少。
+- 失败排查：检查迁移事务、`PromptAnalysisTag` 去重和 `TagAlias` upsert。
+
+- 操作步骤：打开 `/library`，使用合并后的目标标签筛选。
+- 预期结果：标签筛选不显示已归档标签，通过目标标签能找到原 source tags 下的图片。
+- 失败排查：检查 `/api/tags/options`、`/library` 标签查询和关联迁移结果。
+
+- 操作步骤：打开治理记录详情。
+- 预期结果：能看到 rawPlanJson 和 resultJson。
+- 失败排查：检查 `GET /api/tags/governance-runs/[id]`。

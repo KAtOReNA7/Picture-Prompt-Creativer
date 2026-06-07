@@ -134,7 +134,9 @@ export default async function LibraryDetailPage({ params, searchParams }: Librar
 
   const allTags = await prisma.tag.findMany({
     where: { isArchived: false },
-    orderBy: [{ category: "asc" }, { name: "asc" }],
+    include: { _count: { select: { analyses: true } } },
+    orderBy: [{ analyses: { _count: "desc" } }, { category: "asc" }, { name: "asc" }],
+    take: 300,
   });
   const collections = await prisma.collection.findMany({ orderBy: { updatedAt: "desc" }, select: { id: true, name: true } });
   const generatedImages = await prisma.generatedImage.findMany({

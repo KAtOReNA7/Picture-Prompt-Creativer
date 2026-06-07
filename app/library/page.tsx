@@ -158,7 +158,8 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
     include: {
       _count: { select: { analyses: true } },
     },
-    orderBy: [{ category: "asc" }, { name: "asc" }],
+    orderBy: [{ analyses: { _count: "desc" } }, { category: "asc" }, { name: "asc" }],
+    take: 200,
   });
   const currentTag = params.tagId ? await prisma.tag.findUnique({ where: { id: params.tagId }, select: { name: true, category: true, isArchived: true } }) : null;
   const groupedTags = tags
