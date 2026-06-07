@@ -123,7 +123,7 @@ export function FusionWorkspace() {
   useEffect(() => {
     let isActive = true;
 
-    fetch("/api/analyses?limit=50", { cache: "no-store" })
+    fetch("/api/analyses?limit=50&view=fusion", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error("历史分析记录加载失败");

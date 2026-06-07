@@ -18,7 +18,7 @@
 | POST | `/api/prompts/segment` | Prompt 拆解，保留原语言 | `analysisId` | 11 个 segments | analysis 不存在、reversePrompt 为空、AI 失败 | 是 | 否 | 是 |
 | POST | `/api/prompts/fuse` | 风格迁移 | `analysisId`,`userRequirement` | PromptFusion + finalPrompt | analysis 不存在、需求为空、AI 失败 | 是 | 否 | 是 |
 | POST | `/api/prompts/import` | Prompt 保真导入 | `rawPrompt`；可选 `importMode=semantic_preserve/direct` | PromptAnalysis + normalization | Prompt 为空、AI 失败、数据库失败 | 语义整理需要 | 可选图片 | 是 |
-| GET | `/api/analyses` | Prompt 库列表 | 无 | analyses 列表 | 查询参数异常 | 否 | 否 | 否 |
+| GET | `/api/analyses` | Prompt 库分页列表 | 可选 `page`,`pageSize=24/48/96`,`q`,`tagId`,`tagName`,`category`,`hasSegments`,`hasFusions`,`sort`,`view=fusion` | `items` + `pagination`；兼容返回 `analyses`；`view=fusion` 额外返回风格迁移摘要字段 | 查询参数异常 | 否 | 否 | 否 |
 | GET | `/api/analyses/[id]` | Prompt 详情 | id | analysis 详情 | 记录不存在 | 否 | 否 | 否 |
 | DELETE | `/api/analyses/[id]` | 删除 PromptAnalysis | id | 删除成功 | 记录不存在 | 否 | 否 | 是 |
 | POST | `/api/analyses/batch-delete` | 批量删除 PromptAnalysis | `ids` 非空数组，最多 100 条 | deletedCount、notFoundIds、skippedGeneratedImagesCount | ids 为空、超过 100、数据库失败 | 否 | 否 | 是 |

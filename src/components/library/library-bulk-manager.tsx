@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { LibraryCardActions } from "@/components/library/library-card-actions";
 
 type TagItem = {
   id: string;
@@ -19,33 +19,64 @@ type CollectionItem = {
 type AnalysisCard = {
   id: string;
   title: string | null;
-  styleSummary: string | null;
-  visualSubject: string | null;
-  topicPotential: string | null;
   createdAtText: string;
   previewUrl: string | null;
   segmentsCount: number;
   fusionsCount: number;
   variantsCount: number;
   generatedCount: number;
+  importedPromptLanguage?: string | null;
+  importMode?: string | null;
   tags: TagItem[];
+};
+
+type Pagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  from: number;
+  to: number;
 };
 
 type LibraryBulkManagerProps = {
   analyses: AnalysisCard[];
   collections: CollectionItem[];
+  pagination: Pagination;
+  params: Record<string, string | undefined>;
 };
 
-export function LibraryBulkManager({ analyses, collections }: LibraryBulkManagerProps) {
+function languageLabel(language?: string | null): string | null {
+  if (language === "zh") return "中文";
+  if (language === "en") return "英文";
+  if (language === "mixed") return "中英混合";
+  return null;
+}
+
+function makePageHref(params: Record<string, string | undefined>, page: number, pageSize: number): string {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value && key !== "page") next.set(key, value);
+  }
+  next.set("page", String(page));
+  next.set("pageSize", String(pageSize));
+  return `/library?${next.toString()}`;
+}
+
+export function LibraryBulkManager({ analyses, collections, pagination, params }: LibraryBulkManagerProps) {
+  const router = useRouter();
   const [items, setItems] = useState(analyses);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [tagNames, setTagNames] = useState("");
   const [collectionId, setCollectionId] = useState(collections[0]?.id ?? "");
   const [exportFormat, setExportFormat] = useState<"json" | "markdown">("json");
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>("已切换筛选或分页，当前选择已清空。");
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
 
   const selectedCount = selectedIds.length;
   const allSelected = items.length > 0 && selectedIds.length === items.length;
@@ -57,6 +88,20 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
 
   function toggleAll() {
     setSelectedIds(allSelected ? [] : items.map((analysis) => analysis.id));
+  }
+
+  function afterDelete(deletedIds: string[]) {
+    const deletedSet = new Set(deletedIds);
+    const nextItems = items.filter((item) => !deletedSet.has(item.id));
+    setItems(nextItems);
+    setSelectedIds([]);
+    setSingleDeleteId(null);
+    setIsDeleteConfirmOpen(false);
+    if (nextItems.length === 0 && pagination.page > 1) {
+      router.push(makePageHref(params, pagination.page - 1, pagination.pageSize));
+      return;
+    }
+    router.refresh();
   }
 
   async function bulkAddTags() {
@@ -104,9 +149,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
       const response = await fetch(`/api/collections/${collectionId}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: selectedIds.map((id) => ({ itemType: "analysis", itemId: id })),
-        }),
+        body: JSON.stringify({ items: selectedIds.map((id) => ({ itemType: "analysis", itemId: id })) }),
       });
       const data = (await response.json()) as { ok: boolean; error?: string; skippedCount?: number };
       if (!response.ok || !data.ok) throw new Error(data.error ?? "批量加入合集失败");
@@ -144,12 +187,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
     }
   }
 
-  async function bulkDelete() {
-    if (selectedCount === 0) {
-      setError("请选择要删除的 Prompt 记录");
-      return;
-    }
-
+  async function deleteSelected(ids: string[]) {
     setIsWorking(true);
     setError(null);
     setMessage(null);
@@ -157,48 +195,45 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
       const response = await fetch("/api/analyses/batch-delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedIds }),
+        body: JSON.stringify({ ids }),
       });
       const data = (await response.json()) as {
         ok: boolean;
         error?: string;
         deletedCount?: number;
         deletedIds?: string[];
-        notFoundIds?: string[];
         skippedGeneratedImagesCount?: number;
         message?: string;
       };
-
-      if (!response.ok || !data.ok) throw new Error(data.error ?? "批量删除失败");
-
-      const deletedSet = new Set(data.deletedIds ?? selectedIds);
-      setItems((current) => current.filter((item) => !deletedSet.has(item.id)));
-      setSelectedIds([]);
-      setIsDeleteConfirmOpen(false);
-      setMessage(
-        `${data.message ?? `已删除 ${data.deletedCount ?? 0} 条 Prompt 记录，原始图片和生成图已保留。`} 生成图保留 ${data.skippedGeneratedImagesCount ?? 0} 张。`,
-      );
+      if (!response.ok || !data.ok) throw new Error(data.error ?? "删除失败");
+      setMessage(`${data.message ?? `已删除 ${data.deletedCount ?? 0} 条 Prompt 记录，原始图片和生成图已保留。`} 生成图保留 ${data.skippedGeneratedImagesCount ?? 0} 张。`);
+      afterDelete(data.deletedIds ?? ids);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "批量删除失败");
+      setError(requestError instanceof Error ? requestError.message : "删除失败");
     } finally {
       setIsWorking(false);
     }
   }
 
+  const pendingDeleteCount = singleDeleteId ? 1 : selectedCount;
+
   return (
     <div>
-      {isDeleteConfirmOpen ? (
+      {isDeleteConfirmOpen || singleDeleteId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
           <div className="w-full max-w-lg rounded-md bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-semibold text-slate-950">确认批量删除？</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{singleDeleteId ? "确认删除？" : "确认批量删除？"}</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              将删除选中的 {selectedCount} 条 Prompt 记录及其拆解、风格迁移、模板版本和标签绑定。原始图片、生成图和本地文件不会删除，可在运维页检查孤儿文件。
+              将删除{singleDeleteId ? "该" : `选中的 ${pendingDeleteCount} 条`} Prompt 记录及其拆解、风格迁移、模板版本和标签绑定。原始图片和生成图不会删除。
             </p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 disabled={isWorking}
-                onClick={() => setIsDeleteConfirmOpen(false)}
+                onClick={() => {
+                  setIsDeleteConfirmOpen(false);
+                  setSingleDeleteId(null);
+                }}
                 className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
               >
                 取消
@@ -206,7 +241,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
               <button
                 type="button"
                 disabled={isWorking}
-                onClick={() => void bulkDelete()}
+                onClick={() => void deleteSelected(singleDeleteId ? [singleDeleteId] : selectedIds)}
                 className="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
               >
                 {isWorking ? "删除中" : "确认删除"}
@@ -220,7 +255,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <input type="checkbox" checked={allSelected} onChange={toggleAll} />
-            全选当前列表
+            全选当前页
           </label>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-slate-500">已选择 {selectedCount} 条</span>
@@ -243,11 +278,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
               value={tagNames}
               onChange={(event) => setTagNames(event.target.value)}
             />
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-              value={collectionId}
-              onChange={(event) => setCollectionId(event.target.value)}
-            >
+            <select className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" value={collectionId} onChange={(event) => setCollectionId(event.target.value)}>
               <option value="">选择合集</option>
               {collections.map((collection) => (
                 <option key={collection.id} value={collection.id}>
@@ -255,11 +286,7 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
                 </option>
               ))}
             </select>
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-              value={exportFormat}
-              onChange={(event) => setExportFormat(event.target.value as "json" | "markdown")}
-            >
+            <select className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as "json" | "markdown")}>
               <option value="json">导出 JSON</option>
               <option value="markdown">导出 Markdown</option>
             </select>
@@ -279,69 +306,68 @@ export function LibraryBulkManager({ analyses, collections }: LibraryBulkManager
         {error ? <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
       </div>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        {items.map((analysis) => (
-          <article key={analysis.id} className={selectedSet.has(analysis.id) ? "rounded-md border border-cyan-300 bg-cyan-50 p-4 shadow-sm" : "rounded-md border border-slate-200 bg-white p-4 shadow-sm"}>
-            <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input type="checkbox" checked={selectedSet.has(analysis.id)} onChange={() => toggle(analysis.id)} />
-              选择
-            </label>
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {items.map((analysis) => {
+          const visibleTags = analysis.tags.slice(0, 4);
+          const hiddenTagCount = Math.max(0, analysis.tags.length - visibleTags.length);
+          const importedLabel = languageLabel(analysis.importedPromptLanguage);
 
-            {analysis.previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={analysis.previewUrl} alt={analysis.title ?? "Prompt 参考图"} className="h-44 w-full rounded-md object-cover" />
-            ) : (
-              <div className="flex h-44 w-full items-center justify-center rounded-md bg-slate-100 text-sm font-medium text-slate-500">无参考图</div>
-            )}
-
-            <div className="mt-4">
-              <h2 className="line-clamp-1 text-lg font-semibold text-slate-950">{analysis.title ?? "未命名 Prompt 模板"}</h2>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
-                {analysis.styleSummary ?? analysis.topicPotential ?? analysis.visualSubject ?? "暂无摘要"}
-              </p>
-            </div>
-
-            <dl className="mt-4 grid gap-2 text-sm">
-              <div className="rounded-md bg-white/70 p-3">
-                <dt className="font-semibold text-slate-900">画面主体</dt>
-                <dd className="mt-1 line-clamp-2 text-slate-600">{analysis.visualSubject ?? "未填写"}</dd>
+          return (
+            <article key={analysis.id} className={selectedSet.has(analysis.id) ? "rounded-md border border-cyan-300 bg-cyan-50 p-3 shadow-sm" : "rounded-md border border-slate-200 bg-white p-3 shadow-sm"}>
+              <div className="flex items-start gap-3">
+                <input type="checkbox" className="mt-1" checked={selectedSet.has(analysis.id)} onChange={() => toggle(analysis.id)} aria-label="选择该 Prompt" />
+                {analysis.previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={analysis.previewUrl} alt={analysis.title ?? "Prompt 参考图"} className="h-24 w-24 shrink-0 rounded-md object-cover" />
+                ) : (
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-medium text-slate-500">无参考图</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h2 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-950">{analysis.title ?? "未命名 Prompt 模板"}</h2>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {visibleTags.length > 0 ? (
+                      visibleTags.map((tag) => (
+                        <span key={tag.id} className="max-w-full truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-slate-700" style={{ backgroundColor: tag.color ?? "#e0f2fe" }}>
+                          {tag.category ? `${tag.category}/` : ""}
+                          {tag.name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">暂无标签</span>
+                    )}
+                    {hiddenTagCount > 0 ? <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">+{hiddenTagCount}</span> : null}
+                  </div>
+                </div>
               </div>
-            </dl>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {analysis.tags.length > 0 ? (
-                analysis.tags.map((tag) => (
-                  <span key={tag.id} className="rounded-md px-2 py-1 text-xs font-medium text-slate-700" style={{ backgroundColor: tag.color ?? "#e0f2fe" }}>
-                    {tag.category ? `${tag.category} / ${tag.name}` : tag.name}
-                  </span>
-                ))
-              ) : (
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">暂无标签</span>
-              )}
-            </div>
+              <div className="mt-3 grid grid-cols-4 gap-1 text-center text-[11px] font-medium">
+                <span className="rounded bg-emerald-50 px-1.5 py-1 text-emerald-700">模块 {analysis.segmentsCount}</span>
+                <span className="rounded bg-cyan-50 px-1.5 py-1 text-cyan-700">迁移 {analysis.fusionsCount}</span>
+                <span className="rounded bg-amber-50 px-1.5 py-1 text-amber-700">版本 {analysis.variantsCount}</span>
+                <span className="rounded bg-violet-50 px-1.5 py-1 text-violet-700">生成 {analysis.generatedCount}</span>
+              </div>
 
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium">
-              <span className={analysis.segmentsCount > 0 ? "rounded-md bg-emerald-50 px-3 py-1 text-emerald-700" : "rounded-md bg-slate-100 px-3 py-1 text-slate-600"}>Prompt 模块：{analysis.segmentsCount}</span>
-              <span className="rounded-md bg-cyan-50 px-3 py-1 text-cyan-700">风格迁移：{analysis.fusionsCount}</span>
-              <span className="rounded-md bg-amber-50 px-3 py-1 text-amber-700">模板版本：{analysis.variantsCount}</span>
-              <span className="rounded-md bg-violet-50 px-3 py-1 text-violet-700">生成图：{analysis.generatedCount}</span>
-              <span className="rounded-md bg-slate-100 px-3 py-1 text-slate-600">{analysis.createdAtText}</span>
-            </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span>{analysis.createdAtText}</span>
+                {importedLabel ? <span className="rounded bg-slate-100 px-2 py-1">{importedLabel}</span> : null}
+              </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={`/library/${analysis.id}#tags`} className="rounded-md border border-cyan-200 bg-white px-3 py-2 text-sm font-medium text-cyan-700 transition hover:bg-cyan-50">
-                编辑标签
-              </Link>
-              <Link href={`/library/${analysis.id}#tags`} className="rounded-md border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-50">
-                AI 推荐标签
-              </Link>
-            </div>
-
-            <div className="mt-4">
-              <LibraryCardActions analysisId={analysis.id} />
-            </div>
-          </article>
-        ))}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link href={`/library/${analysis.id}`} className="flex-1 rounded-md bg-cyan-600 px-3 py-2 text-center text-sm font-medium text-white transition hover:bg-cyan-700">
+                  查看详情
+                </Link>
+                <button
+                  type="button"
+                  disabled={isWorking}
+                  onClick={() => setSingleDeleteId(analysis.id)}
+                  className="rounded-md border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                >
+                  删除
+                </button>
+              </div>
+            </article>
+          );
+        })}
       </section>
     </div>
   );

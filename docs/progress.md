@@ -808,3 +808,35 @@
 - `POST /api/tags/merge`：成功，`movedRelationsCount=1`、`archivedTagsCount=2`，target tag 创建别名。
 - `/library?tagId=targetTagId`：HTTP 200，可用合并后的 target tag 筛选。
 - `POST /api/tags/suggest-governance`：成功返回 AI 建议，包含合并建议、分类建议；只返回建议，没有自动修改数据库。
+
+## 阶段 16B：Prompt 库分页与紧凑列表
+
+完成内容：
+
+- `GET /api/analyses` 增加服务端分页，支持 `page`、`pageSize=24/48/96`、`q`、`tagId`、`tagName`、`category`、`hasSegments`、`hasFusions`、`sort`。
+- `/api/analyses` 返回结构升级为 `items` + `pagination`，并保留 `analyses` 兼容字段。
+- 列表 API 精简字段，不再返回超长 reversePrompt、negativePrompt、rawJson、完整 segments、完整 fusions、完整 variants 或完整 generatedImages。
+- `/library` 改为服务端分页，默认每页 24 条，支持切换 48 / 96。
+- `/library` 卡片精简为预览图、标题、最多 4 个标签、模块数量、迁移次数、版本数量、生成图数量、时间、查看详情和删除。
+- 保留当前页多选、批量添加标签、批量加入合集、批量导出和批量删除。
+- 单条删除使用中文二次确认，删除 Prompt 记录但保留原始图片和生成图。
+- 标签筛选继续按 category 分组，默认隐藏已归档标签，已归档当前筛选标签会显示提示。
+- 更新 `docs/prompt-library.md`、`docs/api-regression.md` 和 `docs/acceptance-test.md`。
+
+验证结果：
+
+- `npm run check:env`：成功，OpenAI `/models` HTTP 200；常见代理端口 7890 和 10809 未监听。
+- `npm run lint`：成功。
+- `npm run build`：成功；Turbopack 对维护服务文件追踪有非阻断 warning。
+
+页面与接口测试：
+
+- `GET /api/analyses?page=1&pageSize=24`：成功，返回 24 条，`pagination.pageSize=24`。
+- `GET /api/analyses?page=1&pageSize=48`：成功，返回 48 条，`pagination.pageSize=48`。
+- `GET /api/analyses?page=1&pageSize=96`：成功，返回 96 条，`pagination.pageSize=96`。
+- 当前总记录数：177。
+- 默认列表 API 不返回 `reversePrompt` 长字段。
+- `GET /api/analyses?limit=50&view=fusion`：成功，兼容 `/fusion` 所需的 `styleSummary` 等摘要字段。
+- `/library?page=2&pageSize=48`：HTTP 200，URL 分页状态可刷新保留。
+- `/library/[id]`：HTTP 200，详情页完整信息仍可访问。
+- `POST /api/analyses/batch-delete` 空 ids 测试：返回中文错误“ids 必须是非空数组”，未误删数据。
