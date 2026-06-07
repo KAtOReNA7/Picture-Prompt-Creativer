@@ -1,23 +1,54 @@
-# Picture Prompt Creativer
+# 图像 Prompt 创作器
 
-中文 WebUI 工具，用于图片 Prompt 逆向分析、Prompt 拆解、风格迁移、测试图生成、生成图评估、模板版本管理、标签合集整理和本地运维备份。
+面向中文创作者、运营人员和视觉策划的本地 WebUI 工具。它可以从图片或已有 Prompt 出发，完成图片逆向分析、Prompt 拆解、风格迁移、测试图生成、效果评估、标签治理、合集整理、导出和本地备份。
 
-## 核心功能
+> 所有效果图由项目配置的 image2 图片模型生成，用于展示产品方向和功能体验，不代表真实运行截图。
 
-- 上传图片并调用视觉模型生成中文结构化分析。
-- 批量上传多张图片并逐张逆向分析，每个成功结果进入 Prompt 库。
-- 图片逆向分析会生成英文 reverse prompt 和 negative prompt。
-- 导入 Prompt 会保留原文，支持中文、英文和中英混合 Prompt。
-- 将 Prompt 拆解为可替换模块。
-- 输入新需求并融合原风格，生成新的 image2 Prompt。
-- 保存 Prompt 库、PromptVariant、风格迁移记录和生成图。
-- 评估生成图效果并生成改良 Prompt。
-- 使用标签、合集和导出功能整理素材。
-- 使用运维页面检查数据库、文件、备份、孤儿文件和错误日志。
+![图像 Prompt 创作器总览](docs/assets/github/hero-dashboard.png)
+
+## 核心能力
+
+- 图片逆向分析：上传图片后调用视觉模型，生成中文结构化分析和可迁移 Prompt。
+- Prompt 模块拆解：把 Prompt 拆成主体、场景、构图、风格、色彩、光影、镜头、材质、情绪、文字区和 Negative 等模块。
+- 风格迁移融合：保留原图风格资产，输入新需求后生成新的 image2 Prompt。
+- 测试图生成：调用图片模型生成测试图，并保留 prompt 来源和原图血缘关系。
+- 生成图评估：用视觉模型评估生成图效果，输出评分、问题和改良 Prompt。
+- Prompt 库管理：分页浏览、标签筛选、批量删除、批量导出、批量加入合集。
+- 标签治理：支持标签分类、层级、归档、合并、别名和自动治理记录。
+- 批量逆向：最多 100 张图片逐张上传和队列式分析，失败项可单独重试。
+- 本地运维：数据库统计、文件检查、备份下载、孤儿文件检查和最近错误日志。
+
+## 功能效果图
+
+### 图片逆向分析
+
+上传图片后，系统会分析主体、风格、年代感、构图、色彩、光影、材质和选题价值，并生成 reverse prompt 与 negative prompt。
+
+![图片逆向分析效果图](docs/assets/github/image-analysis.png)
+
+### Prompt 库与标签筛选
+
+Prompt 库采用高密度分页列表，保留预览图、标题、标签、模块数量、迁移次数、版本数量、生成图数量和操作入口，详情信息仍在详情页完整展示。
+
+![Prompt 库效果图](docs/assets/github/prompt-library.png)
+
+### 图片生成与效果评估
+
+生成图可以继续评估，系统会给出综合评分、Prompt 匹配度、风格保留度、问题说明和改良 Prompt。
+
+![图片生成与评估效果图](docs/assets/github/generation-evaluation.png)
+
+## 技术栈
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- Prisma
+- SQLite
+- OpenAI 官方 npm SDK
+- OpenAI 兼容接口，支持自定义 `OPENAI_BASE_URL`
 
 ## 本地启动
-
-### 第一次启动
 
 ```bash
 npm install
@@ -32,81 +63,15 @@ npm run dev
 http://localhost:3000
 ```
 
-建议第一次启动后依次打开：
+建议首次启动后依次检查：
 
-1. `/diagnostics`：确认环境、Git、OpenAI `/models` 状态。
-2. `/settings`：确认 API Key 只显示掩码，模型名匹配。
-3. `/maintenance`：确认数据库统计、文件夹大小和备份功能。
+1. `/diagnostics`：环境、Git、npm registry、代理端口、OpenAI `/models` 连通性。
+2. `/settings`：AI 配置状态，API Key 只显示掩码。
+3. `/maintenance`：数据库统计、文件夹大小、备份和日志状态。
 
-## 完整使用流程
+## 环境变量
 
-1. 上传图片，或导入已有 Prompt / 中文模糊描述。
-2. 生成图片逆向分析或保存无图 Prompt。
-3. 拆解 Prompt 模块，标记可替换字段。
-4. 输入新需求，做风格迁移。
-5. 生成测试图。
-6. 评估生成图效果。
-7. 使用改良 Prompt 再生成。
-8. 在 Prompt 库中编辑模板版本。
-9. 添加标签，建立合集。
-10. 导出 JSON / Markdown，定期创建备份。
-
-### 批量逆向 Prompt
-
-打开 `/batch-analyze` 创建批量任务。一次最多选择 100 张图片，单张最大 40MB。系统会逐张上传图片并逐张调用视觉模型分析，不会把 100 张图片合并成一个巨大请求。失败的图片不会影响其他图片，可以在任务详情页单独重试。
-
-## 常见工作流
-
-### 从图片开始
-
-打开 `/analyze`，上传图片，点击“开始 AI 分析”，再点击“拆解 Prompt”。之后可以在 `/fusion` 输入新需求，生成新的 image2 Prompt。
-
-### 从已有 Prompt 开始
-
-打开 `/import`，粘贴中文、英文或中英混合 Prompt。推荐选择“AI 语义整理入库，保留原文”，系统会保留原始内容，只分析风格、主体、构图、色彩、光影和标签。
-
-### 从中文 Prompt 开始
-
-打开 `/import`，在“原始 Prompt / 模糊描述”中填写中文画面描述，例如“冷色电影感，一个孤独女人站在雨夜街头，适合悬疑小说小红书封面”。导入后进入详情页查看原始中文 Prompt、检测语言和结构化分析。导入记录的 reversePrompt 就是原始可执行 Prompt，不会被自动改写成英文。
-
-### 从模糊描述开始
-
-如果还没有完整 Prompt，可以只写主体、气质和用途，例如“复古胶片感、适合咖啡品牌海报、温暖但不要太商业”。语义整理模式只做分析整理，不会自动转英文。直接导入模式只做存档。
-
-## Prompt 导入保真原则
-
-- 原始 Prompt 是核心资产，导入时会原样保存到 `importedRawPrompt`。
-- 导入记录的 `reversePrompt` 表示当前可执行 Prompt，会保存用户原文，不保证英文。
-- 中文 Prompt 可以直接入库，也可以后续直接生成图片。
-- 如果需要英文适配版，应作为后续单独功能处理，不会在导入时自动覆盖原文。
-
-### 从 Prompt 库复用
-
-打开 `/library`，使用搜索、标签筛选和排序找到已有记录。进入详情后复制 Prompt、编辑模板版本，或加入合集。
-
-### 生成图后评估和改良
-
-打开 `/generated-images/[id]`，点击评估。查看评分、问题和改良 Prompt，再用改良 Prompt 生成新图。
-
-### 建立合集并导出
-
-打开 `/collections` 创建合集。可以从 `/library` 批量加入 analysis，也可以从 PromptVariant 或 GeneratedImage 详情加入合集。进入合集详情后导出 JSON 或 Markdown。
-
-## 数据备份建议
-
-- 每次完成一批重要 Prompt 或生成图后，在 `/maintenance` 创建备份。
-- 换电脑前先创建备份 zip，再复制到新电脑恢复。
-- 不要把 `.env.local`、`prisma/dev.db`、`uploads/`、`exports/`、`backups/` 提交到 GitHub。
-
-## 预估进度弹窗
-
-图片分析、Prompt 拆解、风格迁移、测试图生成、生成图评估、AI 润色、AI 推荐标签和 AI 语义整理导入等耗时操作会显示进度弹窗。
-
-弹窗中的百分比是预估进度，不是服务端返回的精确进度。AI 接口不会持续返回真实百分比，因此系统会根据当前操作的典型步骤和等待时间推进到 85% 左右；接口成功后显示 100%，接口失败时显示中文错误。关闭弹窗只会隐藏提示，不会取消请求。
-
-## .env.local 示例
-
-不要提交 `.env.local` 到 GitHub。
+不要把 `.env.local` 提交到 GitHub。
 
 ```env
 DATABASE_URL="file:./dev.db"
@@ -119,6 +84,14 @@ MAX_UPLOAD_MB="15"
 BATCH_MAX_UPLOAD_MB="40"
 ```
 
+说明：
+
+- `OPENAI_API_KEY` 只在服务端读取，不会暴露到前端。
+- `OPENAI_BASE_URL` 默认兼容 `https://linkapi.shop/v1`。
+- 图片分析使用 `OPENAI_VISION_MODEL`。
+- Prompt 拆解、风格迁移、AI 标签建议使用 `OPENAI_TEXT_MODEL`。
+- 测试图生成使用 `OPENAI_IMAGE_MODEL`。
+
 ## 常用命令
 
 ```bash
@@ -128,30 +101,48 @@ npm run build
 npm run dev
 ```
 
-## 数据库迁移
+数据库迁移：
 
 ```bash
 npx prisma generate
 npx prisma migrate dev --name your_migration_name
 ```
 
-SQLite 数据库默认位于：
+批量生成图血缘回填：
 
-```text
-prisma/dev.db
+```bash
+npm run backfill:generated-origin
 ```
 
-该文件已被 `.gitignore` 忽略。
+## 使用流程
 
-## 备份与恢复
+### 从图片开始
 
-运维页面：
+1. 打开 `/analyze` 上传图片。
+2. 点击“开始 AI 分析”生成结构化分析。
+3. 点击“拆解 Prompt”得到 11 个 Prompt 模块。
+4. 跳转 `/fusion` 输入新需求，生成风格迁移 Prompt。
+5. 生成测试图并评估效果。
+6. 将满意结果加入 Prompt 库、标签或合集。
 
-```text
-/maintenance
-```
+### 从已有 Prompt 开始
 
-备份包含：
+1. 打开 `/import` 粘贴中文、英文、中英混合或模糊描述。
+2. 选择 AI 语义整理或直接导入。
+3. 进入 `/library/[id]` 查看结构化字段。
+4. 继续拆解、风格迁移、生成测试图或加入合集。
+
+### 批量图片逆向
+
+打开 `/batch-analyze` 创建批量任务。系统支持最多 100 张图片，单张最大 40MB，逐张上传、逐张分析。失败图片不会影响其他图片，可以单独重试。
+
+### 标签治理和 Prompt 库
+
+打开 `/tags` 管理标签分类、层级、归档、合并和别名。打开 `/library` 可以通过搜索、标签、排序和分页快速定位 Prompt 记录。
+
+### 本地备份
+
+打开 `/maintenance` 创建 zip 备份。备份包含：
 
 - `prisma/dev.db`
 - `uploads/`
@@ -165,73 +156,53 @@ prisma/dev.db
 - `node_modules`
 - `.next`
 
-恢复时请先停止 dev server，解压备份中的 `prisma/dev.db` 和 `uploads/`，再执行：
+## 安全边界
 
-```bash
-npm install
-npx prisma generate
-npm run dev
-```
+- API Key 不进入前端页面。
+- 错误接口不返回完整 API Key。
+- 上传文件、生成图、数据库和备份目录默认不提交 GitHub。
+- `.gitignore` 已忽略 `.env.local`、`prisma/dev.db`、`uploads/`、`exports/`、`backups/` 和 `logs/`。
+- 图片 Prompt 可以是中文、英文或中英混合；是否适合具体模型取决于模型能力。
 
-不要用备份覆盖新的 `.env.local`。
+## 版本检查点
 
-## GitHub 同步
-
-代码可以提交到 GitHub；本地数据文件不会提交：
-
-- `.env.local`
-- `prisma/dev.db`
-- `uploads/`
-- `exports/`
-- `backups/`
-- `logs/`
-
-常用同步：
-
-```bash
-git status
-git add .
-git commit -m "message"
-git push origin main
-```
+- `v0.6.0-batch-analysis`：批量图片逆向 Prompt 分析工作流。
+- `v0.7.0-library-governance`：标签治理与分页 Prompt 库。
 
 ## 常见问题
 
 ### npm install 卡住
 
-检查当前 registry：
+先检查 registry：
 
 ```bash
 npm config get registry
-```
-
-也可以运行：
-
-```bash
 npm run check:env
 ```
 
+必要时切换到可访问的 npm registry。
+
 ### OPENAI_BASE_URL 不通
 
-检查 `.env.local` 中的 `OPENAI_BASE_URL`，然后访问 `/settings` 或 `/maintenance` 查看 `/models` 连通性。
+检查 `.env.local` 中的 `OPENAI_BASE_URL`，然后打开 `/settings` 或 `/diagnostics` 查看 `/models` 连通性。
 
 ### 图片上传失败
 
-确认图片格式为 JPEG、PNG 或 WebP，并检查 `MAX_UPLOAD_MB`。
+确认图片格式为 JPEG、PNG 或 WebP，并检查 `MAX_UPLOAD_MB` 和 `BATCH_MAX_UPLOAD_MB`。
 
 ### 图片生成失败
 
-确认 `OPENAI_IMAGE_MODEL` 已配置且模型支持图片生成。查看 `/maintenance` 的最近错误日志。
+确认 `OPENAI_IMAGE_MODEL` 已配置，并且模型支持图片生成。可以在 `/maintenance` 查看最近错误日志。
 
 ### dev.db 丢失
 
-如果有备份，从 `/maintenance` 生成的 zip 中恢复 `prisma/dev.db`。如果没有备份，只能重新迁移并重新导入数据。
+如果有备份，从 `/maintenance` 生成的 zip 中恢复 `prisma/dev.db` 和 `uploads/`。没有备份时，只能重新迁移并重新导入数据。
 
 ### 换电脑如何恢复
 
 1. 克隆 GitHub 仓库。
 2. 执行 `npm install`。
-3. 解压备份中的 `prisma/dev.db`、`uploads/`、`exports/`。
+3. 解压备份中的 `prisma/dev.db`、`uploads/` 和 `exports/`。
 4. 新建自己的 `.env.local`。
 5. 执行 `npx prisma generate`。
 6. 执行 `npm run dev`。
