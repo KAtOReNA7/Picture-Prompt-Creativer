@@ -840,3 +840,13 @@
 - `/library?page=2&pageSize=48`：HTTP 200，URL 分页状态可刷新保留。
 - `/library/[id]`：HTTP 200，详情页完整信息仍可访问。
 - `POST /api/analyses/batch-delete` 空 ids 测试：返回中文错误“ids 必须是非空数组”，未误删数据。
+
+## 版本检查点：v0.7.0-library-governance
+
+- 检查日期：2026-06-07。
+- 检查前 `git status --short`：工作区干净。
+- 创建 tag：`v0.7.0-library-governance`。
+- tag 说明：`v0.7.0: tag governance and paginated prompt library`。
+- 推送结果：`git push origin v0.7.0-library-governance` 成功。
+- tag 确认：`git tag --list` 已显示 `v0.7.0-library-governance`。
+- 该检查点对应阶段 16A 和阶段 16B：标签治理系统、标签归档合并、AI 标签整理建议、Prompt 库服务端分页和高密度列表。
